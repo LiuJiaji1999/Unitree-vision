@@ -1,0 +1,12 @@
+{
+  "admin": {
+    "password_hash": "66d0453d31ddb45f42cd585f906979f8d7aa4495a277855b6480e745bcadb1f5",
+    "role": "admin",
+    "display_name": "管理员"
+  },
+  "operator": {
+    "password_hash": "90293d3ceca6770ce2f855dc68ca8fbccabb8e62f177f4d62a0ca7d50958dbe3",
+    "role": "operator",
+    "display_name": "操作员"
+  }
+}

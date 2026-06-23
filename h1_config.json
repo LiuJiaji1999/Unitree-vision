@@ -1,0 +1,11 @@
+{
+  "robot_ip": "192.168.123.162",
+  "port": 8080,
+  "network_interface": "enx9c69d3565ef9",
+  "protocol": "sdk2",
+  "timeout_ms": 2000,
+  "lowstate_topic": "rt/lowstate",
+  "lowstate_idl": "unitree_go",
+  "lidar_state_topic": "rt/utlidar/lidar_state",
+  "pointcloud_file": "/home/epai/Desktop/unitree_sdk2_python-master/GlobalMap.pcd"
+}
