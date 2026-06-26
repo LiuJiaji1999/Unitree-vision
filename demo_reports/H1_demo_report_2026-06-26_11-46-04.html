@@ -1,0 +1,48 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>H1 机器人演示报告</title>
+<style>
+body { font-family: 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif; color:#172033; margin:28px; }
+h1 { color:#0f2a4a; margin-bottom:4px; }
+h2 { color:#174ea6; border-bottom:1px solid #dbe4ee; padding-bottom:6px; margin-top:24px; }
+.meta, .muted { color:#64748b; }
+table { width:100%; border-collapse:collapse; margin-top:10px; }
+th, td { border:1px solid #d7e0ea; padding:8px; text-align:left; vertical-align:top; }
+th { background:#eef4fb; width:28%; }
+.summary td { width:25%; font-size:15px; }
+.task { padding:12px; background:#eef6ff; border:1px solid #bfd8f8; border-radius:8px; }
+.shot { max-width:100%; border:1px solid #cbd5e1; border-radius:8px; margin-top:8px; }
+.footer { margin-top:28px; color:#64748b; font-size:12px; text-align:center; }
+</style>
+</head>
+<body>
+<h1>H1 机器人视觉监控平台演示报告</h1>
+<p class="meta">生成时间：2026-06-26 11:46:05　|　操作人员：管理员</p>
+
+<h2>任务进度</h2>
+<div class="task"><strong>系统演示准备</strong>　·　准备中　·　进度 0%<br>
+<span class="muted">更新时间：2026-06-26 11:44:38</span></div>
+
+<h2>核心运行指标</h2>
+<table class="summary"><tr><th>机器人连接</th><td>在线</td></tr><tr><th>实时画面</th><td>运行中</td></tr><tr><th>网络延迟</th><td>1.2 ms</td></tr><tr><th>视频帧率</th><td>30.3 FPS</td></tr><tr><th>状态数据包</th><td>42253</td></tr><tr><th>Roll 左右侧倾</th><td>1.00°</td></tr><tr><th>Pitch 前后俯仰</th><td>2.62°</td></tr><tr><th>Yaw 水平朝向</th><td>1.92°</td></tr></table>
+
+<h2>领导驾驶舱截图</h2>
+<img src="H1_dashboard_2026-06-26_11-46-04.png" class="shot">
+
+<h2>实时画面截图</h2><img src='H1_camera_2026-06-26_11-46-04.png' class='shot'>
+
+<h2>运行状态摘要</h2>
+<table><tr><th>更新时间</th><td>2026-06-26 11:46:04</td></tr><tr><th>主板中心温度</th><td>该字段并未开放</td></tr><tr><th>自动充电温度</th><td>该字段并未开放</td></tr><tr><th>风扇转速</th><td>该字段并未开放</td></tr><tr><th>足端力</th><td>该字段并未开放</td></tr><tr><th>组件状态</th><td>16</td></tr></table>
+
+<h2>异常与提醒记录</h2>
+<table><tr><th>时间</th><th>级别</th><th>内容</th></tr><tr><td colspan='3'>本次运行暂未记录异常或提醒。</td></tr></table>
+
+<h2>事件时间轴（最近 30 条）</h2>
+<table><tr><th>时间</th><th>级别</th><th>事件</th></tr><tr><td>2026-06-26 11:45:41</td><td>信息</td><td>回放录像：2026-06-26_11-44-51-887_depth.mp4</td></tr><tr><td>2026-06-26 11:45:21</td><td>信息</td><td>回放录像：2026-06-26_11-44-51-887_color.mp4</td></tr><tr><td>2026-06-26 11:45:11</td><td>信息</td><td>录制完成：/home/epai/Desktop/unitree_sdk2_python-master/camera_recordings/2026-06-26_11-44-51-887_depth.mp4，写入帧数：597</td></tr><tr><td>2026-06-26 11:45:11</td><td>信息</td><td>录制完成：/home/epai/Desktop/unitree_sdk2_python-master/camera_recordings/2026-06-26_11-44-51-887_color.mp4，写入帧数：596</td></tr><tr><td>2026-06-26 11:45:11</td><td>信息</td><td>depth_record_worker 录制线程已停止。</td></tr><tr><td>2026-06-26 11:45:11</td><td>信息</td><td>color_record_worker 录制线程已停止。</td></tr><tr><td>2026-06-26 11:44:51</td><td>信息</td><td>开始录制视频流：http://192.168.123.162:8080/stream/depth</td></tr><tr><td>2026-06-26 11:44:51</td><td>信息</td><td>开始录制视频流：http://192.168.123.162:8080/stream/color</td></tr><tr><td>2026-06-26 11:44:51</td><td>信息</td><td>开始录制 depth 视频：/home/epai/Desktop/unitree_sdk2_python-master/camera_recordings/2026-06-26_11-44-51-887_depth.mp4</td></tr><tr><td>2026-06-26 11:44:51</td><td>信息</td><td>开始录制 color 视频：/home/epai/Desktop/unitree_sdk2_python-master/camera_recordings/2026-06-26_11-44-51-887_color.mp4</td></tr><tr><td>2026-06-26 11:44:48</td><td>信息</td><td>实时画面截图已保存：/home/epai/Desktop/unitree_sdk2_python-master/camera_snapshots/2026-06-26_11-44-48-024_snapshot.png</td></tr><tr><td>2026-06-26 11:44:40</td><td>信息</td><td>机器人端 RealSense 服务已启动。</td></tr><tr><td>2026-06-26 11:44:39</td><td>信息</td><td>展示模式已启动，正在自动连接机器人并打开实时画面。</td></tr><tr><td>2026-06-26 11:44:38</td><td>信息</td><td>用户 管理员 已登录，角色：admin</td></tr></table>
+
+<p class="footer">本报告由 H1 机器人视觉监控平台自动生成。</p>
+</body>
+</html>
