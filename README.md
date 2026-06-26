@@ -1,3 +1,5 @@
+将其封装成exe，无论windows系统还是linux系统都可安装运行！
+
 ## 快速开始[https://support.unitree.com/home/zh/H1_developer/start]
 ```shell
 系统环境:

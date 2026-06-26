@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-H1 机器人控制面板 - PyQt5
+H1 机器人视觉监控平台 - 领导驾驶舱 v3 修正版
 
 演示账号：
     admin / admin123
@@ -13,11 +13,18 @@ H1 机器人控制面板 - PyQt5
 """
 import re
 import signal
+import os
+
+# 领导演示版：尽量压制 OpenCV/FFmpeg 的底层控制台噪声。
+# 例如未正常结束的 MP4 可能触发 "moov atom not found"，后面会在业务层跳过这类文件。
+os.environ.setdefault("OPENCV_LOG_LEVEL", "SILENT")
+os.environ.setdefault("OPENCV_FFMPEG_LOGLEVEL", "-8")
 
 import cv2
 
 
 import hashlib
+import html
 import json
 import math
 import random
@@ -29,9 +36,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 import numpy as np
-from PyQt5.QtCore import QObject, QTimer, pyqtSignal, Qt, QThread, QProcess
+from PyQt5.QtCore import QObject, QTimer, pyqtSignal, Qt, QThread, QProcess, QUrl
 
-from PyQt5.QtGui import QFont, QImage, QPixmap
+from PyQt5.QtGui import QFont, QImage, QPixmap, QDesktopServices, QTextDocument
 from PyQt5.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -61,8 +68,11 @@ from PyQt5.QtWidgets import (
     QFileDialog,
     QToolButton,
     QInputDialog,
+    QProgressBar,
+    QSlider,
 
 )
+from PyQt5.QtPrintSupport import QPrinter
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
@@ -73,6 +83,32 @@ from matplotlib import font_manager, rcParams
 APP_DIR = Path(__file__).resolve().parent
 USERS_FILE = APP_DIR / "users.json"
 CONFIG_FILE = APP_DIR / "h1_config.json"
+NATIVE_RUNTIME_LOG = APP_DIR / "h1_native_runtime.log"
+
+
+def redirect_native_console_output() -> None:
+    """
+    将 C/C++ 底层库直接写到 stdout/stderr 的信息转存到文件。
+
+    Unitree SDK2 / DDS、OpenCV / FFmpeg 有些输出不经过 Python logging，
+    例如 [Reader] take sample error、moov atom not found。
+    领导演示版默认不让这些底层信息刷屏；如需调试，可用：
+        H1_SHOW_NATIVE_CONSOLE=1 python H1_robot_vision_leader_cockpit_v3_fixed.py
+    """
+    if os.environ.get("H1_SHOW_NATIVE_CONSOLE") == "1":
+        return
+
+    try:
+        fd = os.open(str(NATIVE_RUNTIME_LOG), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+        banner = f"\n===== H1 native console redirected at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} =====\n"
+        os.write(fd, banner.encode("utf-8", errors="ignore"))
+
+        # stdout/stderr 都转存。QProcess 捕获的远程命令输出不受影响，仍能进入 UI 事件/状态处理。
+        os.dup2(fd, 1)
+        os.dup2(fd, 2)
+    except Exception:
+        pass
+
 
 # 开发板 PCD 固定位置
 BOARD_PCD_HOST = "192.168.123.162"
@@ -300,6 +336,25 @@ def rpy_deg_text(rpy_value: Any) -> str:
             return "N/A"
 
     return vector_text(deg, 2)
+
+
+def rpy_deg_values(rpy_value: Any):
+    """
+    将 IMU rpy 从弧度转换为角度，返回 Roll / Pitch / Yaw。
+    Roll：机身左右侧倾；Pitch：机身前后俯仰；Yaw：机器人水平朝向。
+    """
+    rpy = to_list(rpy_value)
+    if len(rpy) < 3:
+        return None
+
+    values = []
+    for item in rpy[:3]:
+        try:
+            values.append(math.degrees(float(item)))
+        except Exception:
+            return None
+
+    return values[0], values[1], values[2]
 
 def lowstate_temp_text(value: Any) -> str:
     temp = as_int_or_none(value)
@@ -586,8 +641,8 @@ UI_TEXT_MAP = {
     "adc_reel": "卷线器电流",
     "temperature_ntc1": "主板中心温度",
     "temperature_ntc2": "自动充电温度",
-    "power_v": "电池电压",
-    "power_a": "电池电流",
+    "power_v": "电池电压（底层未开放，已隐藏）",
+    "power_a": "电池电流（底层未开放，已隐藏）",
     "fan_frequency": "风扇转速",
     "crc": "校验位",
     "imu_state": "惯性测量单元状态",
@@ -598,13 +653,17 @@ UI_TEXT_MAP = {
     "bms_soc_display": "电池电量",
     "bms_cell_voltage_summary": "电芯电压概览",
     "motor_state_count": "电机数量",
-    "battery_voltage_display": "电池电压显示",
-    "battery_current_display": "电池电流显示",
+    "battery_voltage_display": "电池电压显示（底层未开放，已隐藏）",
+    "battery_current_display": "电池电流显示（底层未开放，已隐藏）",
 
     # IMU
     "quaternion": "四元数",
-    "rpy": "姿态角",
-    "rpy_deg": "姿态角（度）",
+    "rpy": "姿态角原始值（弧度）",
+    "rpy_deg": "姿态角（Roll/Pitch/Yaw，度）",
+    "leader_attitude_note": "展示说明",
+    "roll_deg": "Roll 左右侧倾",
+    "pitch_deg": "Pitch 前后俯仰",
+    "yaw_deg": "Yaw 水平朝向",
     "gyroscope": "陀螺仪",
     "accelerometer": "加速度计",
     "temperature": "温度",
@@ -955,8 +1014,9 @@ def extract_low_state(msg: Any, topic: str, idl_type: str, packet_count: int) ->
         "adc_reel",
         "temperature_ntc1",
         "temperature_ntc2",
-        "power_v",
-        "power_a",
+        # 电池电压/电流底层未开放，领导展示版不在状态主字段和驾驶舱展示。
+        # "power_v",
+        # "power_a",
         "fan_frequency",
 
     ]
@@ -1008,7 +1068,19 @@ def extract_low_state(msg: Any, topic: str, idl_type: str, packet_count: int) ->
     imu_table = object_to_table_dict(imu_state, imu_preferred)
 
     if "rpy" in imu_table:
-        imu_table["rpy_deg"] = rpy_deg_text(safe_get(imu_state, "rpy", None))
+        rpy_value = safe_get(imu_state, "rpy", None)
+        imu_table["rpy_deg"] = rpy_deg_text(rpy_value)
+
+        rpy_leader_values = rpy_deg_values(rpy_value)
+        if rpy_leader_values is not None:
+            roll_deg, pitch_deg, yaw_deg = rpy_leader_values
+            imu_table["leader_attitude_note"] = (
+                "Roll 表示机身左右侧倾；Pitch 表示机身前后俯仰；"
+                "Yaw 表示机器人在水平面上的朝向变化。单位均为度，数值越接近 0 代表姿态越平稳。"
+            )
+            imu_table["roll_deg"] = f"{roll_deg:.2f}°"
+            imu_table["pitch_deg"] = f"{pitch_deg:.2f}°"
+            imu_table["yaw_deg"] = f"{yaw_deg:.2f}°"
 
     # # BMS 详细页面
     # bms_table = build_bms_display_table(msg, bms_state)
@@ -1613,6 +1685,177 @@ class MjpegRecorderWorker(QThread):
         self._writer.write(frame_bgr)
         self._frames_written += 1
 
+
+
+def is_finalized_mp4(path: Path) -> bool:
+    """
+    判断 MP4 是否基本完整，避免 OpenCV 打开未写完的文件并触发：
+        moov atom not found
+
+    正常停止录制后，MP4 文件会写入 moov 元数据；如果程序/相机/电源中断，
+    文件可能存在但不可回放，应在列表里跳过。
+    """
+    try:
+        path = Path(path)
+        if path.suffix.lower() != ".mp4" or not path.exists() or not path.is_file():
+            return False
+
+        size = path.stat().st_size
+        if size < 8 * 1024:
+            return False
+
+        with path.open("rb") as f:
+            head = f.read(min(size, 2 * 1024 * 1024))
+            if size > 2 * 1024 * 1024:
+                f.seek(max(0, size - 2 * 1024 * 1024))
+                tail = f.read(2 * 1024 * 1024)
+            else:
+                tail = b""
+
+        sample = head + tail
+        return b"ftyp" in sample[:4096] and b"moov" in sample
+
+    except Exception:
+        return False
+
+
+class VideoPlaybackDialog(QDialog):
+    """应用内 MP4 回放窗口，支持播放、暂停和拖动进度。"""
+
+    def __init__(self, video_path: str, parent=None):
+        super().__init__(parent)
+        self.video_path = str(video_path)
+
+        if not is_finalized_mp4(Path(self.video_path)):
+            self.capture = None
+            self.fps = 25.0
+            self.frame_count = 0
+        else:
+            self.capture = cv2.VideoCapture(self.video_path)
+            self.fps = self.capture.get(cv2.CAP_PROP_FPS) or 25.0
+            self.frame_count = int(self.capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+        self.current_frame = 0
+        self._seeking = False
+
+        self.setWindowTitle(f"录像回放 - {Path(self.video_path).name}")
+        self.resize(960, 650)
+        self.setMinimumSize(720, 480)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(12, 12, 12, 12)
+        root.setSpacing(9)
+
+        title = QLabel(Path(self.video_path).name)
+        title.setStyleSheet("font-size:18px; font-weight:900; color:#0f172a;")
+        root.addWidget(title)
+
+        self.video_label = QLabel("正在加载录像…")
+        self.video_label.setAlignment(Qt.AlignCenter)
+        self.video_label.setMinimumSize(640, 360)
+        self.video_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.video_label.setStyleSheet(
+            "background:#020617; color:#dbeafe; border:1px solid #294568; "
+            "border-radius:12px; font-size:16px; font-weight:800;"
+        )
+        root.addWidget(self.video_label, stretch=1)
+
+        controls = QHBoxLayout()
+        controls.setSpacing(8)
+        self.play_btn = QPushButton("暂停")
+        self.play_btn.setObjectName("PrimaryButton")
+        self.play_btn.clicked.connect(self.toggle_playback)
+
+        self.position_slider = QSlider(Qt.Horizontal)
+        self.position_slider.setRange(0, max(0, self.frame_count - 1))
+        self.position_slider.sliderPressed.connect(self._on_slider_pressed)
+        self.position_slider.sliderReleased.connect(self._on_slider_released)
+        self.position_slider.sliderMoved.connect(self.seek_frame)
+
+        self.time_label = QLabel("00:00 / 00:00")
+        self.time_label.setMinimumWidth(120)
+        self.time_label.setAlignment(Qt.AlignCenter)
+
+        controls.addWidget(self.play_btn)
+        controls.addWidget(self.position_slider, stretch=1)
+        controls.addWidget(self.time_label)
+        root.addLayout(controls)
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self._read_next_frame)
+        self.timer.start(max(15, int(1000.0 / max(1.0, self.fps))))
+
+        if self.capture is None or not self.capture.isOpened():
+            self.timer.stop()
+            self.play_btn.setEnabled(False)
+            self.video_label.setText("无法打开该录像文件")
+        else:
+            self._read_next_frame()
+
+    @staticmethod
+    def _format_seconds(seconds: float) -> str:
+        seconds = max(0, int(seconds))
+        return f"{seconds // 60:02d}:{seconds % 60:02d}"
+
+    def toggle_playback(self) -> None:
+        if self.timer.isActive():
+            self.timer.stop()
+            self.play_btn.setText("播放")
+        else:
+            if self.current_frame >= max(0, self.frame_count - 1):
+                self.capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                self.current_frame = 0
+            self.timer.start(max(15, int(1000.0 / max(1.0, self.fps))))
+            self.play_btn.setText("暂停")
+
+    def _read_next_frame(self) -> None:
+        if self.capture is None or not self.capture.isOpened():
+            return
+
+        ok, frame = self.capture.read()
+        if not ok:
+            self.timer.stop()
+            self.play_btn.setText("重新播放")
+            return
+
+        self.current_frame = int(self.capture.get(cv2.CAP_PROP_POS_FRAMES))
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        h, w, channels = frame_rgb.shape
+        image = QImage(frame_rgb.data, w, h, channels * w, QImage.Format_RGB888).copy()
+        pixmap = QPixmap.fromImage(image).scaled(
+            self.video_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
+        self.video_label.setPixmap(pixmap)
+
+        if not self._seeking:
+            self.position_slider.setValue(min(self.current_frame, self.position_slider.maximum()))
+
+        current_seconds = self.current_frame / max(1.0, self.fps)
+        total_seconds = self.frame_count / max(1.0, self.fps)
+        self.time_label.setText(
+            f"{self._format_seconds(current_seconds)} / {self._format_seconds(total_seconds)}"
+        )
+
+    def _on_slider_pressed(self) -> None:
+        self._seeking = True
+
+    def _on_slider_released(self) -> None:
+        self.seek_frame(self.position_slider.value())
+        self._seeking = False
+
+    def seek_frame(self, frame_number: int) -> None:
+        if self.capture is None or not self.capture.isOpened():
+            return
+        frame_number = max(0, min(int(frame_number), max(0, self.frame_count - 1)))
+        self.capture.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+        self.current_frame = frame_number
+        if not self.timer.isActive():
+            self._read_next_frame()
+
+    def closeEvent(self, event) -> None:
+        self.timer.stop()
+        if self.capture is not None:
+            self.capture.release()
+        event.accept()
 
 
 #新增 PCD 点云显示控件
@@ -2826,6 +3069,25 @@ class MainWindow(QMainWindow):
         self._start_camera_after_remote_start = False
         self._closing_app = False
 
+        # 领导驾驶舱、事件时间轴和演示报告所需的运行态数据。
+        self.latest_robot_status: Dict[str, Any] = {}
+        self.event_history: List[Dict[str, str]] = []
+        self.current_task = {
+            "name": "系统演示准备",
+            "stage": "准备中",
+            "progress": 0,
+            "updated_at": now_text(),
+        }
+        self._last_robot_packet_time: Optional[float] = None
+        self._last_camera_image: Optional[QImage] = None
+        self._fps_frame_count = 0
+        self._fps_last_tick = time.monotonic()
+        self._current_video_fps = 0.0
+        self._network_latency_ms: Optional[float] = None
+        self._ping_process: Optional[QProcess] = None
+        self._ping_output = ""
+        self.last_report_path: Optional[Path] = None
+
 
         self.client.log_signal.connect(self.append_log)
         self.client.state_signal.connect(self.on_connection_state_changed)
@@ -2844,6 +3106,15 @@ class MainWindow(QMainWindow):
         self._header_clock_timer.timeout.connect(self._update_header_clock)
         self._header_clock_timer.start(1000)
         self._update_header_clock()
+
+        self._dashboard_timer = QTimer(self)
+        self._dashboard_timer.timeout.connect(self._refresh_dashboard_metrics)
+        self._dashboard_timer.start(1000)
+
+        self._ping_timer = QTimer(self)
+        self._ping_timer.timeout.connect(self._start_network_ping)
+        self._ping_timer.start(3000)
+        QTimer.singleShot(1200, self._start_network_ping)
 
         self.append_log(
             f"用户 {user_profile['display_name']} 已登录，角色：{user_profile['role']}"
@@ -2894,7 +3165,7 @@ class MainWindow(QMainWindow):
                 pass
 
         # 2. 停启动/停止 RealSense 的 QProcess
-        for process_name in ("realsense_process", "realsense_stop_process"):
+        for process_name in ("realsense_process", "realsense_stop_process", "_ping_process"):
             process = getattr(self, process_name, None)
 
             if process is not None:
@@ -3035,6 +3306,61 @@ class MainWindow(QMainWindow):
                 background-color: #f8fafc;
                 border: 1px solid #d9e2ec;
                 border-radius: 10px;
+            }
+
+            #CockpitPanel {
+                background-color: #f8fafc;
+                border: 1px solid #d7e0ea;
+                border-radius: 14px;
+            }
+
+            #CockpitTitle {
+                color: #0f172a;
+                font-size: 18px;
+                font-weight: 900;
+            }
+
+            #CockpitSubtitle {
+                color: #64748b;
+                font-size: 12px;
+            }
+
+            #MetricCard {
+                background-color: white;
+                border: 1px solid #dbe4ee;
+                border-radius: 12px;
+            }
+
+            #MetricLabel {
+                color: #64748b;
+                font-size: 12px;
+                font-weight: 700;
+            }
+
+            #MetricValue {
+                color: #0f2a4a;
+                font-size: 23px;
+                font-weight: 900;
+            }
+
+            #MetricHint {
+                color: #94a3b8;
+                font-size: 11px;
+            }
+
+            QProgressBar {
+                min-height: 20px;
+                border: 1px solid #cbd5e1;
+                border-radius: 9px;
+                background-color: #eef2f7;
+                text-align: center;
+                color: #0f172a;
+                font-weight: 800;
+            }
+
+            QProgressBar::chunk {
+                border-radius: 8px;
+                background-color: #1769e0;
             }
 
             QTabWidget::pane {
@@ -3239,6 +3565,7 @@ class MainWindow(QMainWindow):
         connection_page = self._make_scroll_page(self._build_connection_tab())
         camera_page = self._build_camera_tab()
         status_page = self._build_status_tab()
+        replay_page = self._build_replay_report_tab()
         navigation_page = self._make_scroll_page(self._build_navigation_tab())
         lidar_page = self._build_lidar_tab()
 
@@ -3248,27 +3575,17 @@ class MainWindow(QMainWindow):
         self.tabs.setDocumentMode(True)
         self.tabs.addTab(camera_page, "实时画面")
         self.tabs.addTab(status_page, "运行状态")
+        self.tabs.addTab(replay_page, "回放与报告")
         self.tabs.addTab(lidar_page, "点云地图")
         self.tabs.addTab(navigation_page, "建图导航")
         self.tabs.addTab(connection_page, "系统连接")
         self.tabs.setCurrentIndex(0)
 
-        # 设备日志只用于部署、建图和通信排查。
-        # 领导观看实时画面、状态及点云可视化时不显示，避免挤占展示区域。
-        self.bottom_tip_panel = self._build_bottom_tip_panel()
-        self.bottom_tip_panel.setMinimumHeight(165)
-        self.bottom_tip_panel.setMaximumHeight(260)
-
-        self.main_splitter = QSplitter(Qt.Vertical)
-        self.main_splitter.addWidget(self.tabs)
-        self.main_splitter.addWidget(self.bottom_tip_panel)
-        self.main_splitter.setStretchFactor(0, 7)
-        self.main_splitter.setStretchFactor(1, 2)
-        self.main_splitter.setSizes([620, 190])
-
+        # 领导展示版彻底移除底部“系统运行信息/设备日志”终端面板。
+        # 技术日志不再占用页面空间；重要演示节点进入“回放与报告”的事件时间轴。
         self.tabs.currentChanged.connect(self._on_main_tab_changed)
 
-        root_layout.addWidget(self.main_splitter)
+        root_layout.addWidget(self.tabs)
 
         central.setLayout(root_layout)
         self.setCentralWidget(central)
@@ -3293,26 +3610,16 @@ class MainWindow(QMainWindow):
 
     def _on_main_tab_changed(self, index: int) -> None:
         """
-        仅在“建图导航”和“系统连接”页面显示设备日志。
-
-        其他页面以可视化展示为主，隐藏日志后让主内容自动占满窗口。
+        切换页面时只做业务刷新，不再显示底部终端日志。
         """
-        if not hasattr(self, "tabs") or not hasattr(self, "bottom_tip_panel"):
+        if not hasattr(self, "tabs"):
             return
 
         page_name = self.tabs.tabText(index)
-        show_log = page_name in ("建图导航", "系统连接")
 
-        self.bottom_tip_panel.setVisible(show_log)
-
-        if show_log:
-            # 日志页面给出足够高度，避免标题、按钮和日志正文被裁切。
-            available_height = max(self.main_splitter.height(), 760)
-            log_height = min(230, max(175, int(available_height * 0.24)))
-            self.main_splitter.setSizes([
-                max(420, available_height - log_height),
-                log_height,
-            ])
+        if page_name == "回放与报告":
+            self.refresh_recordings_table()
+            self._refresh_event_table()
 
 
     def _build_presentation_header(self) -> QWidget:
@@ -3408,7 +3715,11 @@ class MainWindow(QMainWindow):
         self.tabs.setCurrentIndex(0)
         self._camera_auto_start = True
         self._set_camera_badge("启动中", "working")
-        self.append_log("展示模式已启动，正在自动打开实时画面。")
+        self.append_log("展示模式已启动，正在自动连接机器人并打开实时画面。")
+
+        if not self.client.connected and not self.client.connecting:
+            self.connect_robot()
+
         self.start_camera()
 
     def _make_scroll_page(self, widget: QWidget) -> QScrollArea:
@@ -3690,7 +4001,7 @@ class MainWindow(QMainWindow):
         self.camera_label = QLabel("正在准备实时画面…")
         self.camera_label.setObjectName("CameraViewport")
         self.camera_label.setAlignment(Qt.AlignCenter)
-        self.camera_label.setMinimumSize(720, 405)
+        self.camera_label.setMinimumSize(560, 315)
         self.camera_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.camera_label.setStyleSheet(
             "background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #020617,stop:1 #101d35); "
@@ -3698,11 +4009,754 @@ class MainWindow(QMainWindow):
             "font-size:18px; font-weight:900;"
         )
 
+        live_splitter = QSplitter(Qt.Horizontal)
+        live_splitter.setChildrenCollapsible(False)
+        live_splitter.addWidget(self.camera_label)
+        live_splitter.addWidget(self._build_leader_cockpit())
+        live_splitter.setStretchFactor(0, 7)
+        live_splitter.setStretchFactor(1, 3)
+        live_splitter.setSizes([830, 330])
+
         camera_layout.addLayout(top_row)
         camera_layout.addWidget(self.camera_status_label)
-        camera_layout.addWidget(self.camera_label, stretch=1)
+        camera_layout.addWidget(live_splitter, stretch=1)
         layout.addWidget(camera_group)
         return page
+
+    def _make_metric_card(self, title: str, initial: str, hint: str = ""):
+        card = QWidget()
+        card.setObjectName("MetricCard")
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(10, 8, 10, 8)
+        card_layout.setSpacing(1)
+
+        label = QLabel(title)
+        label.setObjectName("MetricLabel")
+        value = QLabel(initial)
+        value.setObjectName("MetricValue")
+        value.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        hint_label = QLabel(hint)
+        hint_label.setObjectName("MetricHint")
+        hint_label.setWordWrap(True)
+
+        card_layout.addWidget(label)
+        card_layout.addWidget(value)
+        card_layout.addWidget(hint_label)
+        return card, value, hint_label
+
+    def _build_leader_cockpit(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setMinimumWidth(305)
+        scroll.setMaximumWidth(410)
+
+        panel = QWidget()
+        panel.setObjectName("CockpitPanel")
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(9)
+
+        title = QLabel("观看舱")
+        title.setObjectName("CockpitTitle")
+        subtitle = QLabel("核心指标实时汇总")
+        subtitle.setObjectName("CockpitSubtitle")
+
+        layout.addWidget(title)
+        layout.addWidget(subtitle)
+
+        grid = QGridLayout()
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(8)
+        grid.setVerticalSpacing(8)
+
+        cards = []
+        # card, self.cockpit_robot_value, self.cockpit_robot_hint = self._make_metric_card(
+        #     "机器人", "离线", "等待 LowState"
+        # )
+        # cards.append(card)
+        card, self.cockpit_latency_value, self.cockpit_latency_hint = self._make_metric_card(
+            "网络延迟", "--", "Ping 往返耗时"
+        )
+        cards.append(card)
+        card, self.cockpit_fps_value, self.cockpit_fps_hint = self._make_metric_card(
+            "视频帧率", "0.0", "FPS"
+        )
+        cards.append(card)
+        card, self.cockpit_packet_value, self.cockpit_packet_hint = self._make_metric_card(
+            "状态数据包", "0", "实时累计"
+        )
+        # cards.append(card)
+        cards.append(card)
+
+        card, self.cockpit_roll_value, self.cockpit_roll_hint = self._make_metric_card(
+            "Roll 左右侧倾", "--", "° · 越接近 0 越平稳"
+        )
+        cards.append(card)
+        card, self.cockpit_pitch_value, self.cockpit_pitch_hint = self._make_metric_card(
+            "Pitch 前后俯仰", "--", "° · 前倾/后仰"
+        )
+        cards.append(card)
+        card, self.cockpit_yaw_value, self.cockpit_yaw_hint = self._make_metric_card(
+            "Yaw 水平朝向", "--", "° · 转向角"
+        )
+        cards.append(card)
+
+        for index, card in enumerate(cards):
+            grid.addWidget(card, index // 2, index % 2)
+
+        layout.addLayout(grid)
+
+        task_box = QGroupBox("当前任务")
+        task_layout = QVBoxLayout(task_box)
+        task_layout.setContentsMargins(10, 13, 10, 10)
+        task_layout.setSpacing(6)
+
+        self.cockpit_task_label = QLabel("系统演示准备 · 准备中")
+        self.cockpit_task_label.setWordWrap(True)
+        self.cockpit_task_label.setStyleSheet("font-weight:900; color:#20324d;")
+        self.cockpit_task_progress = QProgressBar()
+        self.cockpit_task_progress.setRange(0, 100)
+        self.cockpit_task_progress.setValue(0)
+        self.cockpit_task_progress.setFormat("%p%")
+
+        report_btn = QPushButton("一键生成演示报告")
+        report_btn.setObjectName("PrimaryButton")
+        report_btn.clicked.connect(self.generate_demo_report)
+
+        task_layout.addWidget(self.cockpit_task_label)
+        task_layout.addWidget(self.cockpit_task_progress)
+        task_layout.addWidget(report_btn)
+        layout.addWidget(task_box)
+        layout.addStretch()
+
+        scroll.setWidget(panel)
+        return scroll
+
+    @staticmethod
+    def _parse_vector_numbers(value: Any) -> List[float]:
+        numbers = re.findall(r"[-+]?\d+(?:\.\d+)?", str(value))
+        result = []
+        for item in numbers:
+            try:
+                result.append(float(item))
+            except Exception:
+                pass
+        return result
+
+    @staticmethod
+    def _metric_text(value: Any, suffix: str = "", digits: int = 1) -> str:
+        if value is None:
+            return "--"
+        text = str(value).strip()
+        if not text or text in ("N/A", "该字段并未开放"):
+            return "--"
+        try:
+            number = float(text)
+            return f"{number:.{digits}f}{suffix}"
+        except Exception:
+            return text
+
+    def _refresh_dashboard_metrics(self) -> None:
+        now = time.monotonic()
+        elapsed = max(0.2, now - self._fps_last_tick)
+        self._current_video_fps = self._fps_frame_count / elapsed
+        self._fps_frame_count = 0
+        self._fps_last_tick = now
+
+        if hasattr(self, "cockpit_fps_value"):
+            fps = self._current_video_fps if self.camera_stream_has_frame else 0.0
+            self.cockpit_fps_value.setText(f"{fps:.1f}")
+
+        connected = bool(self.client.connected)
+        if hasattr(self, "cockpit_robot_value"):
+            self.cockpit_robot_value.setText("在线" if connected else "离线")
+            if self._last_robot_packet_time is None:
+                hint = "等待 LowState 数据"
+            else:
+                age = max(0.0, now - self._last_robot_packet_time)
+                hint = f"数据更新于 {age:.1f} 秒前"
+            self.cockpit_robot_hint.setText(hint)
+
+        if hasattr(self, "cockpit_task_label"):
+            self._sync_task_display()
+
+    def _start_network_ping(self) -> None:
+        if getattr(self, "_closing_app", False):
+            return
+
+        process = getattr(self, "_ping_process", None)
+        if process is not None and process.state() != QProcess.NotRunning:
+            return
+
+        host = self.ip_edit.text().strip() if hasattr(self, "ip_edit") else BOARD_PCD_HOST
+        host = host or BOARD_PCD_HOST
+
+        self._ping_output = ""
+        process = QProcess(self)
+        process.setProcessChannelMode(QProcess.MergedChannels)
+        process.readyReadStandardOutput.connect(self._on_network_ping_output)
+        process.finished.connect(self._on_network_ping_finished)
+        process.errorOccurred.connect(self._on_network_ping_error)
+        self._ping_process = process
+        process.start("ping", ["-c", "1", "-W", "1", host])
+
+    def _on_network_ping_output(self) -> None:
+        process = getattr(self, "_ping_process", None)
+        if process is None:
+            return
+        data = bytes(process.readAllStandardOutput()).decode("utf-8", errors="ignore")
+        self._ping_output += data
+
+    def _on_network_ping_finished(self, exit_code: int, exit_status) -> None:
+        process = getattr(self, "_ping_process", None)
+        output = self._ping_output
+        if process is not None:
+            output += bytes(process.readAllStandardOutput()).decode("utf-8", errors="ignore")
+
+        match = re.search(r"time[=<]\s*([0-9.]+)\s*ms", output, re.IGNORECASE)
+        if exit_code == 0 and match:
+            self._network_latency_ms = float(match.group(1))
+            if hasattr(self, "cockpit_latency_value"):
+                self.cockpit_latency_value.setText(f"{self._network_latency_ms:.1f}")
+                self.cockpit_latency_hint.setText("ms · Ping 往返耗时")
+        else:
+            self._network_latency_ms = None
+            if hasattr(self, "cockpit_latency_value"):
+                self.cockpit_latency_value.setText("超时")
+                self.cockpit_latency_hint.setText("网络不可达或无响应")
+
+        if process is not None:
+            process.deleteLater()
+        self._ping_process = None
+
+    def _on_network_ping_error(self, error) -> None:
+        self._network_latency_ms = None
+        if hasattr(self, "cockpit_latency_value"):
+            self.cockpit_latency_value.setText("--")
+            self.cockpit_latency_hint.setText("无法启动 ping")
+
+        process = getattr(self, "_ping_process", None)
+        if process is not None:
+            process.deleteLater()
+        self._ping_process = None
+
+    def _build_replay_report_tab(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(9)
+
+        heading_row = QHBoxLayout()
+        heading_box = QVBoxLayout()
+        heading = QLabel("录像回放、事件时间轴与演示报告")
+        heading.setObjectName("LiveTitle")
+        intro = QLabel("集中管理录像、演示事件、任务进度和汇报材料。")
+        intro.setObjectName("LiveSubtitle")
+        heading_box.addWidget(heading)
+        heading_box.addWidget(intro)
+        heading_row.addLayout(heading_box)
+        heading_row.addStretch()
+
+        report_now_btn = QPushButton("一键生成演示报告")
+        report_now_btn.setObjectName("PrimaryButton")
+        report_now_btn.clicked.connect(self.generate_demo_report)
+        heading_row.addWidget(report_now_btn)
+        layout.addLayout(heading_row)
+
+        splitter = QSplitter(Qt.Horizontal)
+        splitter.setChildrenCollapsible(False)
+
+        recordings_group = QGroupBox("录像回放")
+        recordings_layout = QVBoxLayout(recordings_group)
+        recordings_layout.setContentsMargins(10, 14, 10, 10)
+        recordings_layout.setSpacing(8)
+
+        recording_buttons = QHBoxLayout()
+        refresh_btn = QPushButton("刷新录像")
+        play_btn = QPushButton("播放选中")
+        play_btn.setObjectName("PrimaryButton")
+        open_record_dir_btn = QPushButton("打开录像目录")
+        refresh_btn.clicked.connect(self.refresh_recordings_table)
+        play_btn.clicked.connect(self.play_selected_recording)
+        open_record_dir_btn.clicked.connect(self.open_recordings_directory)
+        recording_buttons.addWidget(refresh_btn)
+        recording_buttons.addWidget(play_btn)
+        recording_buttons.addWidget(open_record_dir_btn)
+        recording_buttons.addStretch()
+
+        self.recordings_table = QTableWidget()
+        self.recordings_table.setColumnCount(4)
+        self.recordings_table.setHorizontalHeaderLabels(["录制时间", "类型", "文件", "大小"])
+        self.recordings_table.verticalHeader().setVisible(False)
+        self.recordings_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.recordings_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.recordings_table.setSelectionMode(QTableWidget.SingleSelection)
+        header = self.recordings_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.Stretch)
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        self.recordings_table.doubleClicked.connect(self.play_selected_recording)
+
+        recordings_layout.addLayout(recording_buttons)
+        recordings_layout.addWidget(self.recordings_table)
+
+        right_panel = QWidget()
+        right_layout = QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(9)
+
+        task_group = QGroupBox("任务进度展示")
+        task_layout = QGridLayout(task_group)
+        task_layout.setContentsMargins(10, 15, 10, 10)
+        task_layout.setHorizontalSpacing(8)
+        task_layout.setVerticalSpacing(8)
+
+        self.task_name_edit = QLineEdit(self.current_task["name"])
+        self.task_stage_combo = QComboBox()
+        self.task_stage_combo.addItems(["准备中", "执行中", "已完成", "暂停"])
+        self.task_progress_spin = QSpinBox()
+        self.task_progress_spin.setRange(0, 100)
+        self.task_progress_spin.setSuffix(" %")
+        self.task_progress_spin.setValue(int(self.current_task["progress"]))
+        apply_task_btn = QPushButton("更新任务")
+        apply_task_btn.setObjectName("PrimaryButton")
+        apply_task_btn.clicked.connect(self.apply_task_progress)
+
+        self.task_progress_bar = QProgressBar()
+        self.task_progress_bar.setRange(0, 100)
+        self.task_progress_bar.setValue(int(self.current_task["progress"]))
+        self.task_progress_bar.setFormat("当前进度 %p%")
+
+        task_layout.addWidget(QLabel("任务名称"), 0, 0)
+        task_layout.addWidget(self.task_name_edit, 0, 1, 1, 3)
+        task_layout.addWidget(QLabel("阶段"), 1, 0)
+        task_layout.addWidget(self.task_stage_combo, 1, 1)
+        task_layout.addWidget(QLabel("进度"), 1, 2)
+        task_layout.addWidget(self.task_progress_spin, 1, 3)
+        task_layout.addWidget(self.task_progress_bar, 2, 0, 1, 3)
+        task_layout.addWidget(apply_task_btn, 2, 3)
+
+        timeline_group = QGroupBox("事件时间轴")
+        timeline_layout = QVBoxLayout(timeline_group)
+        timeline_layout.setContentsMargins(10, 14, 10, 10)
+        timeline_layout.setSpacing(8)
+
+        timeline_buttons = QHBoxLayout()
+        mark_btn = QPushButton("添加演示事件")
+        clear_timeline_btn = QPushButton("清空时间轴")
+        mark_btn.clicked.connect(self.add_manual_event)
+        clear_timeline_btn.clicked.connect(self.clear_event_timeline)
+        timeline_buttons.addWidget(mark_btn)
+        timeline_buttons.addWidget(clear_timeline_btn)
+        timeline_buttons.addStretch()
+
+        self.event_table = QTableWidget()
+        self.event_table.setColumnCount(3)
+        self.event_table.setHorizontalHeaderLabels(["时间", "级别", "事件"])
+        self.event_table.verticalHeader().setVisible(False)
+        self.event_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.event_table.setSelectionBehavior(QTableWidget.SelectRows)
+        event_header = self.event_table.horizontalHeader()
+        event_header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        event_header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        event_header.setSectionResizeMode(2, QHeaderView.Stretch)
+
+        timeline_layout.addLayout(timeline_buttons)
+        timeline_layout.addWidget(self.event_table)
+
+        report_group = QGroupBox("演示报告")
+        report_layout = QHBoxLayout(report_group)
+        report_layout.setContentsMargins(10, 14, 10, 10)
+        generate_btn = QPushButton("生成 PDF 演示报告")
+        generate_btn.setObjectName("PrimaryButton")
+        open_report_btn = QPushButton("打开最近报告")
+        open_report_dir_btn = QPushButton("打开报告目录")
+        generate_btn.clicked.connect(self.generate_demo_report)
+        open_report_btn.clicked.connect(self.open_last_report)
+        open_report_dir_btn.clicked.connect(self.open_reports_directory)
+        report_layout.addWidget(generate_btn)
+        report_layout.addWidget(open_report_btn)
+        report_layout.addWidget(open_report_dir_btn)
+        report_layout.addStretch()
+
+        right_layout.addWidget(task_group)
+        right_layout.addWidget(timeline_group, stretch=1)
+        right_layout.addWidget(report_group)
+
+        splitter.addWidget(recordings_group)
+        splitter.addWidget(right_panel)
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([560, 580])
+
+        layout.addWidget(splitter, stretch=1)
+        QTimer.singleShot(0, self.refresh_recordings_table)
+        return page
+
+    def refresh_recordings_table(self) -> None:
+        if not hasattr(self, "recordings_table"):
+            return
+
+        directory = APP_DIR / "camera_recordings"
+        directory.mkdir(parents=True, exist_ok=True)
+        all_files = sorted(directory.glob("*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True)
+        files = [path for path in all_files if is_finalized_mp4(path)]
+        skipped = len(all_files) - len(files)
+
+        if skipped and hasattr(self, "status"):
+            self.status.showMessage(
+                f"已隐藏 {skipped} 个未正常结束或损坏的 MP4，避免回放报错。", 6000
+            )
+
+        self.recordings_table.setRowCount(len(files))
+        for row, path in enumerate(files):
+            stamp = datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+            kind = "彩色" if path.stem.endswith("_color") else "深度" if path.stem.endswith("_depth") else "录像"
+            size_mb = path.stat().st_size / (1024 * 1024)
+
+            time_item = QTableWidgetItem(stamp)
+            time_item.setData(Qt.UserRole, str(path))
+            kind_item = QTableWidgetItem(kind)
+            name_item = QTableWidgetItem(path.name)
+            name_item.setToolTip(str(path))
+            size_item = QTableWidgetItem(f"{size_mb:.1f} MB")
+
+            self.recordings_table.setItem(row, 0, time_item)
+            self.recordings_table.setItem(row, 1, kind_item)
+            self.recordings_table.setItem(row, 2, name_item)
+            self.recordings_table.setItem(row, 3, size_item)
+
+        if files:
+            self.recordings_table.selectRow(0)
+
+    def _selected_recording_path(self) -> Optional[Path]:
+        if not hasattr(self, "recordings_table"):
+            return None
+        row = self.recordings_table.currentRow()
+        if row < 0:
+            return None
+        item = self.recordings_table.item(row, 0)
+        if item is None:
+            return None
+        path = item.data(Qt.UserRole)
+        return Path(path) if path else None
+
+    def play_selected_recording(self, *args) -> None:
+        path = self._selected_recording_path()
+        if path is None or not path.exists():
+            QMessageBox.information(self, "请选择录像", "请先在列表中选择一个有效录像。")
+            return
+
+        if not is_finalized_mp4(path):
+            QMessageBox.warning(
+                self,
+                "录像不可回放",
+                "该 MP4 文件未正常结束或已损坏，缺少 moov 元数据。\n"
+                "请重新录制，或只回放正常停止录制后生成的文件。"
+            )
+            self.refresh_recordings_table()
+            return
+
+        self.append_log(f"回放录像：{path.name}")
+        dialog = VideoPlaybackDialog(str(path), self)
+        dialog.exec_()
+
+    def open_recordings_directory(self) -> None:
+        directory = APP_DIR / "camera_recordings"
+        directory.mkdir(parents=True, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(directory.resolve())))
+
+    def _event_level(self, text: str) -> str:
+        lower = text.lower()
+        if any(word in lower for word in ("失败", "错误", "异常", "超时", "崩溃", "error", "failed")):
+            return "异常"
+        if any(word in lower for word in ("警告", "断开", "未收到", "未找到", "无效", "warning")):
+            return "提醒"
+        return "信息"
+
+    def _presentation_event_text(self, text: str) -> Optional[str]:
+        """
+        事件时间轴只保留领导能看懂的演示节点，不再混入终端设备日志。
+        """
+        clean = " ".join(str(text).split())
+        if not clean:
+            return None
+
+        technical_markers = (
+            "topic=", "idl=", "iface=", "ChannelFactory", "LowState", "LidarState",
+            "DDS", "QProcess", "sshpass", "StrictHostKeyChecking", "ss output",
+            "tail -", "[remote]", "start_realsense.py pid", "rt/lowstate",
+            "rt/lidarstate", "Key pressed", "Reader", "take sample", "moov atom",
+        )
+
+        leader_keywords = (
+            "用户", "展示模式", "实时画面", "画面", "相机", "截图", "录制", "回放",
+            "演示事件", "任务进度", "报告", "机器人端 RealSense 服务已启动",
+            "机器人端 RealSense 服务已停止", "连接失败", "启动失败", "导航", "建图",
+            "点云地图已更新", "点云地图更新失败", "已断开连接",
+        )
+
+        if any(keyword in clean for keyword in leader_keywords):
+            return clean[:240]
+
+        if any(marker in clean for marker in technical_markers):
+            return None
+
+        # 只保留短的异常/提醒，长段终端输出一律不进时间轴。
+        level = self._event_level(clean)
+        if level in ("异常", "提醒") and len(clean) <= 180:
+            return clean
+
+        return None
+
+    def _record_event(self, text: str) -> None:
+        clean = self._presentation_event_text(text)
+        if not clean:
+            return
+
+        event = {
+            "time": now_text(),
+            "level": self._event_level(clean),
+            "text": clean[:240],
+        }
+        self.event_history.append(event)
+        if len(self.event_history) > 500:
+            self.event_history = self.event_history[-500:]
+
+        if hasattr(self, "event_table"):
+            self.event_table.insertRow(0)
+            self.event_table.setItem(0, 0, QTableWidgetItem(event["time"]))
+            self.event_table.setItem(0, 1, QTableWidgetItem(event["level"]))
+            item = QTableWidgetItem(event["text"])
+            item.setToolTip(event["text"])
+            self.event_table.setItem(0, 2, item)
+            while self.event_table.rowCount() > 200:
+                self.event_table.removeRow(self.event_table.rowCount() - 1)
+
+    def _refresh_event_table(self) -> None:
+        if not hasattr(self, "event_table"):
+            return
+        events = list(reversed(self.event_history[-200:]))
+        self.event_table.setRowCount(len(events))
+        for row, event in enumerate(events):
+            self.event_table.setItem(row, 0, QTableWidgetItem(event["time"]))
+            self.event_table.setItem(row, 1, QTableWidgetItem(event["level"]))
+            item = QTableWidgetItem(event["text"])
+            item.setToolTip(event["text"])
+            self.event_table.setItem(row, 2, item)
+
+    def add_manual_event(self) -> None:
+        text, ok = QInputDialog.getText(self, "添加演示事件", "事件说明：")
+        if ok and text.strip():
+            self.append_log(f"演示事件：{text.strip()}")
+
+    def clear_event_timeline(self) -> None:
+        self.event_history.clear()
+        if hasattr(self, "event_table"):
+            self.event_table.setRowCount(0)
+
+    def apply_task_progress(self) -> None:
+        name = self.task_name_edit.text().strip() or "未命名任务"
+        stage = self.task_stage_combo.currentText()
+        progress = self.task_progress_spin.value()
+
+        self.current_task = {
+            "name": name,
+            "stage": stage,
+            "progress": progress,
+            "updated_at": now_text(),
+        }
+        self._sync_task_display()
+        self.append_log(f"任务进度更新：{name}，阶段={stage}，进度={progress}%")
+
+    def _sync_task_display(self) -> None:
+        task = self.current_task
+        if hasattr(self, "cockpit_task_label"):
+            self.cockpit_task_label.setText(f"{task['name']} · {task['stage']}")
+            self.cockpit_task_progress.setValue(int(task["progress"]))
+        if hasattr(self, "task_progress_bar"):
+            self.task_progress_bar.setValue(int(task["progress"]))
+
+    def _report_metric_rows(self) -> List[tuple]:
+        lowstate = self.latest_robot_status.get("lowstate_main", {})
+        imu = self.latest_robot_status.get("imu_state", {})
+        rpy = self._parse_vector_numbers(imu.get("rpy_deg", ""))
+        roll = f"{rpy[0]:.2f}°" if len(rpy) > 0 else "--"
+        pitch = f"{rpy[1]:.2f}°" if len(rpy) > 1 else "--"
+        yaw = f"{rpy[2]:.2f}°" if len(rpy) > 2 else "--"
+        latency = f"{self._network_latency_ms:.1f} ms" if self._network_latency_ms is not None else "超时/未知"
+
+        return [
+            ("机器人连接", "在线" if self.client.connected else "离线"),
+            ("实时画面", "运行中" if self.camera_stream_has_frame else "未运行"),
+            ("网络延迟", latency),
+            ("视频帧率", f"{self._current_video_fps:.1f} FPS"),
+            ("状态数据包", str(lowstate.get("packet_count", "0"))),
+            ("Roll 左右侧倾", roll),
+            ("Pitch 前后俯仰", pitch),
+            ("Yaw 水平朝向", yaw),
+        ]
+
+    def generate_demo_report(self) -> None:
+        report_dir = APP_DIR / "demo_reports"
+        report_dir.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        pdf_path = report_dir / f"H1_demo_report_{stamp}.pdf"
+        html_path = report_dir / f"H1_demo_report_{stamp}.html"
+        dashboard_image = report_dir / f"H1_dashboard_{stamp}.png"
+        camera_image = report_dir / f"H1_camera_{stamp}.png"
+
+        old_index = self.tabs.currentIndex() if hasattr(self, "tabs") else 0
+        try:
+            if hasattr(self, "tabs"):
+                self.tabs.setCurrentIndex(0)
+                QApplication.processEvents()
+            self.centralWidget().grab().save(str(dashboard_image), "PNG")
+        finally:
+            if hasattr(self, "tabs") and old_index != 0:
+                self.tabs.setCurrentIndex(old_index)
+
+        camera_saved = False
+        if self._last_camera_image is not None and not self._last_camera_image.isNull():
+            camera_saved = self._last_camera_image.save(str(camera_image), "PNG")
+        elif hasattr(self, "camera_label"):
+            pixmap = self.camera_label.pixmap()
+            if pixmap is not None and not pixmap.isNull():
+                camera_saved = pixmap.save(str(camera_image), "PNG")
+
+        metric_rows = self._report_metric_rows()
+        metrics_html = "".join(
+            f"<tr><th>{html.escape(name)}</th><td>{html.escape(value)}</td></tr>"
+            for name, value in metric_rows
+        )
+
+        lowstate = self.latest_robot_status.get("lowstate_main", {})
+        detail_keys = [
+            "update_time", "temperature_ntc1",
+            "temperature_ntc2", "fan_frequency", "foot_force", "bit_flag",
+        ]
+        details = []
+        for key in detail_keys:
+            if key in lowstate:
+                details.append((tr_ui_text(key), str(lowstate.get(key, ""))))
+        detail_html = "".join(
+            f"<tr><th>{html.escape(name)}</th><td>{html.escape(value)}</td></tr>"
+            for name, value in details
+        ) or "<tr><td colspan='2'>当前尚未收到机器人状态数据。</td></tr>"
+
+        exceptions = [e for e in self.event_history if e["level"] in ("异常", "提醒")][-20:]
+        exception_html = "".join(
+            f"<tr><td>{html.escape(e['time'])}</td><td>{html.escape(e['level'])}</td>"
+            f"<td>{html.escape(e['text'])}</td></tr>" for e in reversed(exceptions)
+        ) or "<tr><td colspan='3'>本次运行暂未记录异常或提醒。</td></tr>"
+
+        recent_events = self.event_history[-30:]
+        event_html = "".join(
+            f"<tr><td>{html.escape(e['time'])}</td><td>{html.escape(e['level'])}</td>"
+            f"<td>{html.escape(e['text'])}</td></tr>" for e in reversed(recent_events)
+        ) or "<tr><td colspan='3'>暂无事件记录。</td></tr>"
+
+        task = self.current_task
+        camera_section = (
+            f"<h2>实时画面截图</h2><img src='{html.escape(camera_image.name)}' class='shot'>"
+            if camera_saved else
+            "<h2>实时画面截图</h2><p class='muted'>生成报告时尚未取得有效相机画面。</p>"
+        )
+
+        report_html = f"""
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>H1 机器人演示报告</title>
+<style>
+body {{ font-family: 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif; color:#172033; margin:28px; }}
+h1 {{ color:#0f2a4a; margin-bottom:4px; }}
+h2 {{ color:#174ea6; border-bottom:1px solid #dbe4ee; padding-bottom:6px; margin-top:24px; }}
+.meta, .muted {{ color:#64748b; }}
+table {{ width:100%; border-collapse:collapse; margin-top:10px; }}
+th, td {{ border:1px solid #d7e0ea; padding:8px; text-align:left; vertical-align:top; }}
+th {{ background:#eef4fb; width:28%; }}
+.summary td {{ width:25%; font-size:15px; }}
+.task {{ padding:12px; background:#eef6ff; border:1px solid #bfd8f8; border-radius:8px; }}
+.shot {{ max-width:100%; border:1px solid #cbd5e1; border-radius:8px; margin-top:8px; }}
+.footer {{ margin-top:28px; color:#64748b; font-size:12px; text-align:center; }}
+</style>
+</head>
+<body>
+<h1>H1 机器人视觉监控平台演示报告</h1>
+<p class="meta">生成时间：{html.escape(now_text())}　|　操作人员：{html.escape(self.user_profile.get('display_name', ''))}</p>
+
+<h2>任务进度</h2>
+<div class="task"><strong>{html.escape(task['name'])}</strong>　·　{html.escape(task['stage'])}　·　进度 {int(task['progress'])}%<br>
+<span class="muted">更新时间：{html.escape(task['updated_at'])}</span></div>
+
+<h2>核心运行指标</h2>
+<table class="summary">{metrics_html}</table>
+
+<h2>领导驾驶舱截图</h2>
+<img src="{html.escape(dashboard_image.name)}" class="shot">
+
+{camera_section}
+
+<h2>运行状态摘要</h2>
+<table>{detail_html}</table>
+
+<h2>异常与提醒记录</h2>
+<table><tr><th>时间</th><th>级别</th><th>内容</th></tr>{exception_html}</table>
+
+<h2>事件时间轴（最近 30 条）</h2>
+<table><tr><th>时间</th><th>级别</th><th>事件</th></tr>{event_html}</table>
+
+<p class="footer">本报告由 H1 机器人视觉监控平台自动生成。</p>
+</body>
+</html>
+"""
+
+        html_path.write_text(report_html, encoding="utf-8")
+
+        try:
+            document = QTextDocument()
+            document.setBaseUrl(QUrl.fromLocalFile(str(report_dir.resolve()) + "/"))
+            document.setHtml(report_html)
+
+            printer = QPrinter(QPrinter.HighResolution)
+            printer.setOutputFormat(QPrinter.PdfFormat)
+            printer.setOutputFileName(str(pdf_path))
+            printer.setPageMargins(12, 12, 12, 12, QPrinter.Millimeter)
+            document.print_(printer)
+        except Exception as exc:
+            self.append_log(f"PDF 报告生成失败，已保留 HTML 报告：{exc}")
+            QMessageBox.warning(
+                self,
+                "PDF 生成失败",
+                f"PDF 生成失败，但 HTML 报告已经保存：\n{html_path}\n\n错误：{exc}",
+            )
+            self.last_report_path = html_path
+            return
+
+        self.last_report_path = pdf_path
+        self.append_log(f"演示报告已生成：{pdf_path}")
+        QMessageBox.information(
+            self,
+            "演示报告已生成",
+            f"PDF：\n{pdf_path}\n\nHTML：\n{html_path}",
+        )
+
+    def open_last_report(self) -> None:
+        path = self.last_report_path
+        if path is None or not Path(path).exists():
+            QMessageBox.information(self, "暂无报告", "请先生成一份演示报告。")
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(path).resolve())))
+
+    def open_reports_directory(self) -> None:
+        directory = APP_DIR / "demo_reports"
+        directory.mkdir(parents=True, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(directory.resolve())))
 
     def save_camera_snapshot(self) -> None:
         pixmap = self.camera_label.pixmap() if hasattr(self, "camera_label") else None
@@ -3867,6 +4921,7 @@ class MainWindow(QMainWindow):
             self.append_log(f"录制完成：{path}，写入帧数：{frames}")
         else:
             self.append_log(f"录制结束但未写入有效帧：{path}")
+        self.refresh_recordings_table()
 
 
 
@@ -4391,7 +5446,14 @@ class MainWindow(QMainWindow):
             "color: green; font-weight: 700;" if connected else "color: red; font-weight: 700;"
         )
 
+        if hasattr(self, "cockpit_robot_value"):
+            self.cockpit_robot_value.setText("在线" if connected else "离线")
+            self.cockpit_robot_hint.setText("LowState 已连接" if connected else "等待设备连接")
+
     def update_robot_status(self, status: Dict[str, Any]) -> None:
+        self.latest_robot_status = status
+        self._last_robot_packet_time = time.monotonic()
+
         lowstate_main = status.get("lowstate_main", {})
         imu_state = status.get("imu_state", {})
         # bms_state = status.get("bms_state", {})
@@ -4402,6 +5464,24 @@ class MainWindow(QMainWindow):
         self._fill_kv_table(self.imu_table, imu_state)
         # self._fill_kv_table(self.bms_table, bms_state)
         self._fill_motor_table(motor_columns, motor_rows)
+
+        if hasattr(self, "cockpit_packet_value"):
+            self.cockpit_packet_value.setText(str(lowstate_main.get("packet_count", "0")))
+
+        if hasattr(self, "cockpit_voltage_value"):
+            voltage = lowstate_main.get("power_v")
+            voltage_text = self._metric_text(voltage, " V", 1)
+            self.cockpit_voltage_value.setText(voltage_text)
+
+        rpy = self._parse_vector_numbers(imu_state.get("rpy_deg", ""))
+        values = [
+            self.cockpit_roll_value if hasattr(self, "cockpit_roll_value") else None,
+            self.cockpit_pitch_value if hasattr(self, "cockpit_pitch_value") else None,
+            self.cockpit_yaw_value if hasattr(self, "cockpit_yaw_value") else None,
+        ]
+        for index, label in enumerate(values):
+            if label is not None:
+                label.setText(f"{rpy[index]:.1f}" if len(rpy) > index else "--")
 
 
     def _camera_stream_url(self) -> str:
@@ -4707,6 +5787,8 @@ class MainWindow(QMainWindow):
             return
 
         self.camera_stream_has_frame = True
+        self._last_camera_image = image.copy()
+        self._fps_frame_count += 1
         self._set_camera_badge("实时", "live")
         self.snapshot_camera_btn.setEnabled(True)
 
@@ -5337,8 +6419,17 @@ class MainWindow(QMainWindow):
         self.append_log("已清空待写入值。")
 
     def append_log(self, text: str) -> None:
-        # text = strip_ansi(text)
-        self.log_edit.append(f"[{now_text()}] {text}")
+        clean = str(text).strip()
+        if not clean:
+            return
+
+        # 不再显示“系统运行信息/设备日志”终端面板。
+        # 简短状态给状态栏，演示相关节点进入事件时间轴。
+        if hasattr(self, "status") and self.status is not None:
+            brief = " ".join(clean.split())
+            self.status.showMessage(brief[:160], 5000)
+
+        self._record_event(clean)
 
 
    
@@ -5351,6 +6442,7 @@ class MainWindow(QMainWindow):
 
 def main() -> int:
     signal.signal(signal.SIGINT, signal.SIG_DFL)
+    redirect_native_console_output()
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
     setup_matplotlib_chinese_font()
