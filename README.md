@@ -1,31 +1,31 @@
-将其封装成exe，无论windows系统还是linux系统都可安装运行！
-开始一直提示‘已中止（核心以转存）’
-cd ~/Desktop/unitree_sdk2_python-master/dist/H1Vision
-mv cv2/qt cv2/qt.disabled 2>/dev/null || true
-export QT_PLUGIN_PATH="$PWD/PyQt5/Qt5/plugins"
-export QT_QPA_PLATFORM_PLUGIN_PATH="$PWD/PyQt5/Qt5/plugins/platforms"
-export QT_QPA_PLATFORM=xcb
-H1_SHOW_NATIVE_CONSOLE=1 ./H1Vision
+### 客户端封装
+```shell
+# 将其封装成deb/exe，无论linux系统/windows系统都可安装运行！
+# 开始一直提示‘已中止（核心以转存）’改完package_unitree_vision.py后的重新打包流程 
 
+1.在项目根目录执行：
+    cd ~/Desktop/unitree_sdk2_python-master
+    conda activate vision
+    rm -rf build dist build_packaging_entry H1Vision.spec
+    ./build_linux.sh --deb
+2.然后测试：
+    conda deactivate
+    cd ~/Desktop/unitree_sdk2_python-master/dist/H1Vision
+    H1_SHOW_NATIVE_CONSOLE=1 ./H1Vision
 
-部署到其他 Ubuntu 电脑
-把这个文件拷贝到目标电脑：
-
-dist/h1vision_1.0.0_amd64.deb
-
-然后在目标电脑执行：
-sudo apt install ./h1vision_1.0.0_amd64.deb
-sudo chown -R $USER:$USER /opt/h1vision
-/opt/h1vision/H1Vision
-
-或者创建命令：
-sudo ln -sf /opt/h1vision/H1Vision /usr/local/bin/h1vision
-h1vision
-
-卸载
-sudo apt remove h1vision
-sudo rm -rf /opt/h1vision
-
+##### 
+1. 安装客户端，部署到其他 Ubuntu 电脑
+    dist/h1vision_1.0.0_amd64.deb # 把这个文件拷贝到目标电脑：
+    cd ~/Desktop/unitree_sdk2_python-master
+    sudo apt install ./dist/h1vision_1.0.0_amd64.deb
+    sudo chown -R $USER:$USER /opt/h1vision
+    /opt/h1vision/H1Vision 
+    # 安装 .deb 后，桌面菜单里应该会出现：
+    H1Vision #双击即可
+2. 卸载客户端
+    sudo apt remove h1vision
+    sudo rm -rf /opt/h1vision
+```
 
 ## 快速开始[https://support.unitree.com/home/zh/H1_developer/start]
 ```shell
