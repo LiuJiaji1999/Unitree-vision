@@ -4,29 +4,6 @@
 """
 H1 机器人控制面板 - PyQt5
 
-功能：
-1. 美化登录界面
-2. 主控制界面
-3. H1 机器人连接配置
-4. SDK2 LowState 实时状态读取：
-   - IMU
-   - 电池电压/电流/SOC
-   - 电机状态
-5. 深度相机/视频流显示：
-   - USB 摄像头，例如 0
-   - MJPEG/HTTP 流
-   - RTSP 流
-6. 参数读取/写入接口预留
-7. 指令接口预留：急停、站立、坐下
-8. 日志输出
-
-运行：
-    pip install PyQt5 opencv-python
-    python3 h1_pyqt_login_app.py
-
-如果要用本机 RealSense 深度相机：
-    pip install pyrealsense2
-
 演示账号：
     admin / admin123
     operator / operator123
@@ -403,8 +380,6 @@ class RobotConfig:
 
     # 已导出的 PCD 点云地图文件，建议把 GlobalMap.pcd 放到程序同目录
     pointcloud_file: str = str(LOCAL_PCD_PATH)
-
-
 
 
 def import_lowstate_class(idl_type: str):
@@ -957,72 +932,6 @@ def cell_voltage_summary(cell_vol: Any) -> str:
     )
 
 
-# def build_bms_display_table(msg: Any, bms_state: Any) -> Dict[str, str]:
-#     power_v = safe_get(msg, "power_v", None)
-#     power_a = safe_get(msg, "power_a", None)
-
-#     version_high = safe_get(bms_state, "version_high", None)
-#     version_low = safe_get(bms_state, "version_low", None)
-#     status = safe_get(bms_state, "status", None)
-#     soc = safe_get(bms_state, "soc", None)
-#     current = safe_get(bms_state, "current", None)
-#     cycle = safe_get(bms_state, "cycle", None)
-#     bq_ntc = safe_get(bms_state, "bq_ntc", None)
-#     mcu_ntc = safe_get(bms_state, "mcu_ntc", None)
-#     cell_vol = safe_get(bms_state, "cell_vol", None)
-
-#     data: Dict[str, str] = {}
-
-#     # # LowState 顶层电源信息
-#     # power_v_float = as_float_or_none(power_v)
-#     # power_a_float = as_float_or_none(power_a)
-
-#     # data["LowState 总电压 power_v"] = (
-#     #     f"{power_v_float:.2f} V" if power_v_float is not None else "N/A"
-#     # )
-
-#     # data["LowState 总电流 power_a"] = (
-#     #     f"{power_a_float:.2f} A" if power_a_float is not None else "N/A"
-#     # )
-
-#     # BMS 基本信息
-#     data["电池版本"] = bms_version_text(version_high, version_low)
-#     data["电池状态"] = bms_status_text(status)
-
-#     soc_i = as_int_or_none(soc)
-#     data["电池电量"] = f"{soc_i} %" if soc_i is not None else "N/A"
-
-#     data["充放电信息"] = bms_current_text(current)
-
-#     cycle_i = as_int_or_none(cycle)
-#     data["充电循环次数"] = str(cycle_i) if cycle_i is not None else "N/A"
-
-#     # 温度信息
-#     data["电池内部 NTC 温度"] = bms_temp_array_text(
-#         bq_ntc,
-#         names=["BAT1", "BAT2"],
-#     )
-
-#     # data["电池板 NTC 数组"] = bms_temp_array_text(
-#     #     mcu_ntc,
-#     #     names=["RES", "MOS"],
-#     # )
-
-  
-#     if bms_state is None:
-#         data["诊断"] = "没有拿到 bms_state 对象。请检查 LowState IDL / Topic。"
-
-#     elif all_zero_list(cell_vol) and as_int_or_none(soc) in (None, 0):
-#         data["诊断"] = (
-#             "底层固件没有填充 BMS 子结构"
-#         )
-
-#     else:
-#         data["诊断"] = "已读取到 BMS 字段。"
-
-#     return data
-
-
 def extract_low_state(msg: Any, topic: str, idl_type: str, packet_count: int) -> Dict[str, Any]:
     imu_state = safe_get(msg, "imu_state")
     # bms_state = safe_get(msg, "bms_state")
@@ -1163,128 +1072,6 @@ class LowStateWorker(QThread):
         self.fatal_signal.emit(
             f"当前实时状态只实现 mock/sdk2。protocol={self.config.protocol}"
         )
-
-    # def _run_mock(self) -> None:
-    #     self.log_signal.emit("mock 状态线程启动。")
-    #     self.ready_signal.emit()
-    #     start = time.monotonic()
-
-    #     while self._running:
-    #         self._packet_count += 1
-    #         t = time.monotonic() - start
-
-    #         lowstate_main = {
-    #             "update_time": now_text(),
-    #             "packet_count": str(self._packet_count),
-    #             "topic": "mock/lowstate",
-    #             "idl_type": "mock",
-    #             "head": "[254, 239]",
-    #             "foot_force": "[0, 0, 0, 0]",
-    #             "foot_force_est": "[0, 0, 0, 0]",
-    #             "tick": str(int(t * 1000)),
-    #             "wireless_remote": "[0, 0, 0, 0, ...]",
-    #             "bit_flag": "0",
-    #             "adc_reel": "0.000000",
-    #             "temperature_ntc1": "35",
-    #             "temperature_ntc2": "34",
-    #             "power_v": fmt_float(67.2 + random.uniform(-0.3, 0.3), 6),
-    #             "power_a": fmt_float(1.5 + random.uniform(-0.2, 0.2), 6),
-    #             "fan_frequency": "[1200, 1200, 1200, 0]",
-    #             "crc": "0",
-    #             "imu_state": "mock",
-    #             "bms_state": "mock",
-    #             "motor_state_count": "20",
-    #         }
-
-
-    #         rpy = [
-    #             0.02 * math.sin(t),
-    #             0.04 * math.sin(t * 0.6),
-    #             0.12 * math.sin(t * 0.2),
-    #         ]
-
-    #         imu_table = {
-    #             "quaternion": vector_text([1.0, 0.0, 0.0, 0.0], 6),
-    #             "rpy": vector_text(rpy, 6),
-    #             "rpy_deg": rpy_deg_text(rpy),
-    #             "gyroscope": vector_text(
-    #                 [
-    #                     random.uniform(-0.02, 0.02),
-    #                     random.uniform(-0.02, 0.02),
-    #                     random.uniform(-0.02, 0.02),
-    #                 ],
-    #                 6,
-    #             ),
-    #             "accelerometer": vector_text(
-    #                 [
-    #                     random.uniform(-0.05, 0.05),
-    #                     random.uniform(-0.05, 0.05),
-    #                     9.81 + random.uniform(-0.05, 0.05),
-    #                 ],
-    #                 6,
-    #             ),
-    #             "temperature": "35",
-    #         }
-
-    #         bms_table = {
-    #             "version_high": "1",
-    #             "version_low": "0",
-    #             "status": "0",
-    #             "soc": "80",
-    #             "current": fmt_float(1.5 + random.uniform(-0.2, 0.2), 6),
-    #             "cycle": "12",
-    #             "bq_ntc": "[32, 33]",
-    #             "mcu_ntc": "[34, 35]",
-    #             "cell_vol": "[4100, 4101, 4100, 4099, 4102, 4101, 4100, 4098, 4101, 4100, 4099, 4102, 4101, 4100, 4099]",
-
-    #         }
-
-    #         motor_columns = [
-    #         "index",
-    #         "mode",
-    #         "q",
-    #         "dq",
-    #         "ddq",
-    #         "tau_est",
-    #         "temperature",
-    #         "lost",
-    #         "error_flag",
-    #         "comm_frequency",
-    #     ]
-
-    #         motor_rows = []
-
-    #         for index in range(20):
-    #             motor_rows.append(
-    #                 {
-    #                     "index": str(index),
-    #                     "mode": "0",
-    #                     "q": fmt_float(random.uniform(-0.1, 0.1), 6),
-    #                     "dq": fmt_float(random.uniform(-0.05, 0.05), 6),
-    #                     "ddq": fmt_float(0.0, 6),
-    #                     "tau_est": fmt_float(random.uniform(-0.2, 0.2), 6),
-    #                     "q_raw": "0",
-    #                     "dq_raw": "0",
-    #                     "ddq_raw": "0",
-    #                     "temperature": str(35 + index % 4),
-    #                     "lost": "0",
-    #                     "error_flag": "0",
-    #                     "comm_frequency": "100",
-    #                 }
-    #             )
-
-    #         status = {
-    #             "lowstate_main": lowstate_main,
-    #             "imu_state": imu_table,
-    #             "bms_state": bms_table,
-    #             "motor_columns": motor_columns,
-    #             "motor_rows": motor_rows,
-    #         }
-
-    #         self.status_signal.emit(status)
-    #         self.msleep(100)
-
-    #     self.log_signal.emit("mock 状态线程已停止。")
 
     def _run_sdk2(self) -> None:
         try:
@@ -1692,6 +1479,140 @@ class MjpegStreamWorker(QThread):
 
             self._response = None
             # self.log_signal.emit("视频流线程已停止。")
+
+class MjpegRecorderWorker(QThread):
+    log_signal = pyqtSignal(str)
+    error_signal = pyqtSignal(str)
+    done_signal = pyqtSignal(str, int)
+
+    def __init__(self, url: str, save_path: str, fps: float = 20.0, parent=None):
+        super().__init__(parent)
+        self.url = url
+        self.save_path = str(save_path)
+        self.fps = float(fps)
+        self._running = True
+        self._response = None
+        self._writer = None
+        self._record_size = None
+        self._frames_written = 0
+
+    def stop(self) -> None:
+        self._running = False
+
+        response = getattr(self, "_response", None)
+        if response is not None:
+            try:
+                response.close()
+            except Exception:
+                pass
+
+    def run(self) -> None:
+        import urllib.request
+        import socket
+
+        buffer = b""
+
+        try:
+            self.log_signal.emit(f"开始录制视频流：{self.url}")
+
+            request = urllib.request.Request(
+                self.url,
+                headers={
+                    "User-Agent": "H1-Vision-Recorder",
+                    "Cache-Control": "no-cache",
+                    "Pragma": "no-cache",
+                    "Connection": "close",
+                },
+            )
+
+            self._response = urllib.request.urlopen(request, timeout=8)
+
+            while self._running:
+                try:
+                    chunk = self._response.read(4096)
+                except socket.timeout:
+                    continue
+                except Exception as exc:
+                    if self._running:
+                        self.error_signal.emit(f"录制视频流读取中断：{exc}")
+                    break
+
+                if not self._running:
+                    break
+
+                if not chunk:
+                    if self._running:
+                        self.error_signal.emit("录制视频流连接已断开。")
+                    break
+
+                buffer += chunk
+
+                start = buffer.find(b"\xff\xd8")
+                end = buffer.find(b"\xff\xd9")
+
+                if start != -1 and end != -1 and end > start:
+                    jpg = buffer[start:end + 2]
+                    buffer = buffer[end + 2:]
+
+                    jpg_array = np.frombuffer(jpg, dtype=np.uint8)
+                    frame_bgr = cv2.imdecode(jpg_array, cv2.IMREAD_COLOR)
+
+                    if frame_bgr is None:
+                        continue
+
+                    self._write_frame(frame_bgr)
+
+                if len(buffer) > 2 * 1024 * 1024:
+                    buffer = buffer[-512 * 1024:]
+
+        except Exception as exc:
+            if self._running:
+                self.error_signal.emit(f"录制视频流失败：{exc}")
+
+        finally:
+            try:
+                if self._response is not None:
+                    self._response.close()
+            except Exception:
+                pass
+
+            self._response = None
+
+            if self._writer is not None:
+                self._writer.release()
+                self._writer = None
+
+            self.done_signal.emit(self.save_path, self._frames_written)
+
+    def _write_frame(self, frame_bgr) -> None:
+        h, w = frame_bgr.shape[:2]
+
+        if self._writer is None:
+            self._record_size = (w, h)
+
+            save_path = Path(self.save_path)
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            self._writer = cv2.VideoWriter(
+                str(save_path),
+                fourcc,
+                self.fps,
+                self._record_size,
+            )
+
+            if not self._writer.isOpened():
+                self._writer = None
+                self._running = False
+                self.error_signal.emit(f"无法创建视频文件：{save_path}")
+                return
+
+        if self._record_size != (w, h):
+            frame_bgr = cv2.resize(frame_bgr, self._record_size)
+
+        self._writer.write(frame_bgr)
+        self._frames_written += 1
+
 
 
 #新增 PCD 点云显示控件
@@ -2573,29 +2494,13 @@ class NavigationWindow(QDialog):
         btn_row.addStretch()
         btn_row.addWidget(self.clear_nav_log_btn)
 
-        # cmd_tip = QLabel(
-        #     "启动流程：ssh 到机器人 → cd ws/unitree_slam/build → 设置 LD_LIBRARY_PATH → sudo ./demo_h1 eth0"
-        # )
-        # cmd_tip.setWordWrap(True)
-        # cmd_tip.setStyleSheet("color: #475569; font-weight: 700;")
-
-        # self.nav_output = QTextEdit()
-        # self.nav_output.setReadOnly(True)
+  
         self.nav_output = InteractiveTerminalEdit()
         self.nav_output.input_signal.connect(self.send_stdin)
-        # self.nav_output.setMinimumHeight(320)
-        # 终端显示区域加大
         self.nav_output.setMinimumHeight(280)
-
-        # # 让终端区域优先占满导航窗口剩余空间
-        # self.nav_output.setSizePolicy(
-        #     QSizePolicy.Expanding,
-        #     QSizePolicy.Expanding,
-        # )
 
         root.addWidget(config_group)
         root.addLayout(btn_row)
-        # root.addWidget(cmd_tip)
         root.addWidget(self.nav_output, stretch=1)
 
         self.setLayout(root)
@@ -2829,8 +2734,6 @@ class NavigationWindow(QDialog):
         if not data.endswith("\n"):
             data += "\n"
 
-        # self.nav_output.insertPlainText(data)
-        # self.nav_output.moveCursor(self.nav_output.textCursor().End)
         self.nav_output.append_remote_text(data)
 
     def _on_process_finished(self, exit_code: int, exit_status) -> None:
@@ -2862,7 +2765,6 @@ class NavigationWindow(QDialog):
             self.stop_navigation()
 
         super().closeEvent(event)
-
 
 
 class MainWindow(QMainWindow):
@@ -3554,13 +3456,29 @@ class MainWindow(QMainWindow):
         self.stop_camera_btn = QPushButton("停止显示")
         self.stop_remote_camera_btn = QPushButton("停止相机服务")
         self.record_camera_btn = QPushButton("录制")
+        self.record_camera_btn.setEnabled(False)
         self.record_camera_btn.clicked.connect(self.toggle_camera_recording)
 
+        # self.camera_recording = False
+        # self.camera_record_writer = None
+        # self.camera_record_path = None
+        # self.camera_record_size = None
+        # self.camera_record_fps = 20.0
+        # self.camera_latest_frame_bgr = None
+
         self.camera_recording = False
-        self.camera_record_writer = None
-        self.camera_record_path = None
-        self.camera_record_size = None
         self.camera_record_fps = 20.0
+
+        self.camera_service_started = False
+        self.camera_stream_has_frame = False
+
+        self.color_record_worker = None
+        self.depth_record_worker = None
+
+        self.color_record_path = None
+        self.depth_record_path = None
+
+
 
 
         self.start_camera_btn.clicked.connect(self.start_camera)
@@ -3606,117 +3524,265 @@ class MainWindow(QMainWindow):
         else:
             self.start_camera_recording()
 
-
     def start_camera_recording(self):
         if getattr(self, "camera_recording", False):
             return
 
-        save_dir = Path.cwd() / "camera_recordings"
+        if not getattr(self, "camera_service_started", False):
+            self.camera_status_label.setText("请先启动机器人端 RealSense 相机服务，再开始录制。")
+            return
+
+        if getattr(self, "camera_worker", None) is None:
+            self.camera_status_label.setText("当前没有打开实时画面，请先点击“启动相机并显示”。")
+            return
+
+        if not getattr(self, "camera_stream_has_frame", False):
+            self.camera_status_label.setText("当前还没有收到实时画面，收到第一帧后才能录制。")
+            return
+
+        host = self.ip_edit.text().strip() if hasattr(self, "ip_edit") else BOARD_PCD_HOST
+        host = host or BOARD_PCD_HOST
+        port = BOARD_REALSENSE_PORT
+
+        color_url = f"http://{host}:{port}/stream/color"
+        depth_url = f"http://{host}:{port}/stream/depth"
+
+        save_dir = APP_DIR / "camera_recordings"
         save_dir.mkdir(parents=True, exist_ok=True)
 
-        camera_kind = "camera"
-        if hasattr(self, "camera_kind_combo"):
-            camera_kind = self.camera_kind_combo.currentData() or "camera"
+        date_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.camera_record_path = save_dir / f"realsense_{camera_kind}_{timestamp}.mp4"
+
+        self.color_record_path = save_dir / f"{date_name}_color.mp4"
+        self.depth_record_path = save_dir / f"{date_name}_depth.mp4"
+
+        # 如果同一天重复录制，按“当前日期”命名会覆盖旧文件。
+        # 这里主动删除旧文件，避免 VideoWriter 追加/占用异常。
+        for path in [self.color_record_path, self.depth_record_path]:
+            try:
+                if path.exists():
+                    path.unlink()
+            except Exception as exc:
+                self.camera_status_label.setText(f"无法覆盖旧视频文件：{path}，错误：{exc}")
+                return
+
+        self.color_record_worker = MjpegRecorderWorker(
+            color_url,
+            str(self.color_record_path),
+            self.camera_record_fps,
+            self,
+        )
+
+        self.depth_record_worker = MjpegRecorderWorker(
+            depth_url,
+            str(self.depth_record_path),
+            self.camera_record_fps,
+            self,
+        )
+
+        for worker in [self.color_record_worker, self.depth_record_worker]:
+            worker.log_signal.connect(self.append_log)
+            worker.error_signal.connect(self._on_camera_record_error)
+            worker.done_signal.connect(self._on_camera_record_done)
 
         self.camera_recording = True
-        self.camera_record_writer = None
-        self.camera_record_size = None
 
         self.record_camera_btn.setText("录制中")
         self.record_camera_btn.setStyleSheet(
             "background-color: #dc2626; color: white; font-weight: 800;"
         )
 
+        self.color_record_worker.start()
+        self.depth_record_worker.start()
+
         self.camera_status_label.setText(
-            f"正在录制，视频将保存到本地：{self.camera_record_path}"
+            "正在录制 color 和 depth 两路视频：\n"
+            f"color：{self.color_record_path}\n"
+            f"depth：{self.depth_record_path}"
         )
 
+        self.append_log(f"开始录制 color 视频：{self.color_record_path}")
+        self.append_log(f"开始录制 depth 视频：{self.depth_record_path}")
 
     def stop_camera_recording(self):
-        if not getattr(self, "camera_recording", False) and self.camera_record_writer is None:
+        color_worker = getattr(self, "color_record_worker", None)
+        depth_worker = getattr(self, "depth_record_worker", None)
+
+        if not getattr(self, "camera_recording", False) and color_worker is None and depth_worker is None:
             return
 
         self.camera_recording = False
 
-        if self.camera_record_writer is not None:
-            self.camera_record_writer.release()
-            self.camera_record_writer = None
+        for attr_name in ["color_record_worker", "depth_record_worker"]:
+            worker = getattr(self, attr_name, None)
 
-        saved_path = self.camera_record_path
+            if worker is None:
+                continue
+
+            try:
+                worker.stop()
+
+                if not worker.wait(5000):
+                    self.append_log(f"{attr_name} 录制线程 5 秒内未退出。")
+                else:
+                    self.append_log(f"{attr_name} 录制线程已停止。")
+
+                worker.deleteLater()
+
+            except Exception as exc:
+                self.append_log(f"停止 {attr_name} 失败：{exc}")
+
+            setattr(self, attr_name, None)
 
         self.record_camera_btn.setText("录制")
         self.record_camera_btn.setStyleSheet("")
 
-        if saved_path and Path(saved_path).exists():
-            self.camera_status_label.setText(f"录制已停止，视频已保存到：{saved_path}")
+        if getattr(self, "camera_service_started", False) and getattr(self, "camera_stream_has_frame", False):
+            self.record_camera_btn.setEnabled(True)
         else:
-            self.camera_status_label.setText("录制已停止，但没有写入有效视频帧。")
+            self.record_camera_btn.setEnabled(False)
 
-
-    def _ensure_camera_record_writer(self, frame_bgr):
-        h, w = frame_bgr.shape[:2]
-
-        self.camera_record_size = (w, h)
-
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        self.camera_record_writer = cv2.VideoWriter(
-            str(self.camera_record_path),
-            fourcc,
-            self.camera_record_fps,
-            self.camera_record_size,
+        self.camera_status_label.setText(
+            "录制已停止，视频已保存到本地：\n"
+            f"color：{self.color_record_path}\n"
+            f"depth：{self.depth_record_path}"
         )
 
-        if not self.camera_record_writer.isOpened():
-            self.camera_record_writer = None
-            self.camera_recording = False
-            self.record_camera_btn.setText("录制")
-            self.record_camera_btn.setStyleSheet("")
-            self.camera_status_label.setText("录制失败：无法创建本地视频文件。")
+    def _on_camera_record_error(self, text: str) -> None:
+        self.append_log(text)
 
-
-    def _write_camera_record_frame(self, frame, frame_is_rgb=False):
-        """
-        frame: 当前相机帧，建议传 OpenCV 解码后的 numpy.ndarray
-        frame_is_rgb:
-            False 表示 frame 是 BGR，OpenCV 默认格式
-            True 表示 frame 是 RGB，Qt 显示常用格式
-        """
-        if not getattr(self, "camera_recording", False):
-            return
-
-        if frame is None:
-            return
-
-        if len(frame.shape) == 2:
-            frame_bgr = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-        elif frame.shape[2] == 4:
-            if frame_is_rgb:
-                frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
-            else:
-                frame_bgr = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+        if getattr(self, "camera_recording", False):
+            self.camera_status_label.setText(f"录制发生错误，已停止录制：{text}")
+            self.stop_camera_recording()
         else:
-            if frame_is_rgb:
-                frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            else:
-                frame_bgr = frame
+            self.camera_status_label.setText(f"录制发生错误：{text}")
 
-        if frame_bgr.dtype != "uint8":
-            frame_bgr = frame_bgr.astype("uint8")
 
-        if self.camera_record_writer is None:
-            self._ensure_camera_record_writer(frame_bgr)
+    def _on_camera_record_done(self, path: str, frames: int) -> None:
+        if frames > 0:
+            self.append_log(f"录制完成：{path}，写入帧数：{frames}")
+        else:
+            self.append_log(f"录制结束但未写入有效帧：{path}")
 
-        if self.camera_record_writer is None:
-            return
 
-        h, w = frame_bgr.shape[:2]
-        if self.camera_record_size != (w, h):
-            frame_bgr = cv2.resize(frame_bgr, self.camera_record_size)
 
-        self.camera_record_writer.write(frame_bgr)
+    # def start_camera_recording(self):
+    #     if getattr(self, "camera_recording", False):
+    #         return
+      
+
+    #     if getattr(self, "camera_latest_frame_bgr", None) is None:
+    #         self.camera_status_label.setText("当前还没有相机画面，启动相机并显示画面后才能录制。")
+    #         return
+
+    #     save_dir = Path.cwd() / "camera_recordings"
+    #     save_dir.mkdir(parents=True, exist_ok=True)
+
+    #     camera_kind = "camera"
+    #     if hasattr(self, "camera_kind_combo"):
+    #         camera_kind = self.camera_kind_combo.currentData() or "camera"
+
+    #     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    #     self.camera_record_path = save_dir / f"realsense_{camera_kind}_{timestamp}.mp4"
+
+    #     self.camera_recording = True
+    #     self.camera_record_writer = None
+    #     self.camera_record_size = None
+
+    #     self.record_camera_btn.setText("录制中")
+    #     self.record_camera_btn.setStyleSheet(
+    #         "background-color: #dc2626; color: white; font-weight: 800;"
+    #     )
+
+    #     self.camera_status_label.setText(
+    #         f"正在录制，视频将保存到本地：{self.camera_record_path}"
+    #     )
+
+
+    # def stop_camera_recording(self):
+    #     if not getattr(self, "camera_recording", False) and self.camera_record_writer is None:
+    #         return
+
+    #     self.camera_recording = False
+
+    #     if self.camera_record_writer is not None:
+    #         self.camera_record_writer.release()
+    #         self.camera_record_writer = None
+
+    #     saved_path = self.camera_record_path
+
+    #     self.record_camera_btn.setText("录制")
+    #     self.record_camera_btn.setStyleSheet("")
+
+    #     if saved_path and Path(saved_path).exists():
+    #         self.camera_status_label.setText(f"录制已停止，视频已保存到：{saved_path}")
+    #     else:
+    #         self.camera_status_label.setText("录制已停止，但没有写入有效视频帧。")
+
+
+    # def _ensure_camera_record_writer(self, frame_bgr):
+    #     h, w = frame_bgr.shape[:2]
+
+    #     self.camera_record_size = (w, h)
+
+    #     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    #     self.camera_record_writer = cv2.VideoWriter(
+    #         str(self.camera_record_path),
+    #         fourcc,
+    #         self.camera_record_fps,
+    #         self.camera_record_size,
+    #     )
+
+    #     if not self.camera_record_writer.isOpened():
+    #         self.camera_record_writer = None
+    #         self.camera_recording = False
+    #         self.record_camera_btn.setText("录制")
+    #         self.record_camera_btn.setStyleSheet("")
+    #         self.camera_status_label.setText("录制失败：无法创建本地视频文件。")
+
+
+    # def _write_camera_record_frame(self, frame, frame_is_rgb=False):
+    #     """
+    #     frame: 当前相机帧，建议传 OpenCV 解码后的 numpy.ndarray
+    #     frame_is_rgb:
+    #         False 表示 frame 是 BGR，OpenCV 默认格式
+    #         True 表示 frame 是 RGB，Qt 显示常用格式
+    #     """
+    #     if not getattr(self, "camera_recording", False):
+    #         return
+
+    #     if frame is None:
+    #         return
+
+    #     if len(frame.shape) == 2:
+    #         frame_bgr = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+    #     elif frame.shape[2] == 4:
+    #         if frame_is_rgb:
+    #             frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
+    #         else:
+    #             frame_bgr = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+    #     else:
+    #         if frame_is_rgb:
+    #             frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    #         else:
+    #             frame_bgr = frame
+
+    #     if frame_bgr.dtype != "uint8":
+    #         frame_bgr = frame_bgr.astype("uint8")
+
+    #     if self.camera_record_writer is None:
+    #         self._ensure_camera_record_writer(frame_bgr)
+
+    #     if self.camera_record_writer is None:
+    #         return
+
+    #     h, w = frame_bgr.shape[:2]
+    #     if self.camera_record_size != (w, h):
+    #         frame_bgr = cv2.resize(frame_bgr, self.camera_record_size)
+
+    #     self.camera_record_writer.write(frame_bgr)
+
+
 
 
     def _build_navigation_tab(self) -> QWidget:
@@ -3998,13 +4064,7 @@ class MainWindow(QMainWindow):
         self.pcd_path_edit.setReadOnly(True)
 
 
-        # self.browse_pcd_btn = QPushButton("选择")
-        # self.reload_pcd_btn = QPushButton("加载")
-        # self.zoom_in_pcd_btn = QPushButton("+")
-        
-        # self.fetch_pcd_btn = QPushButton("从开发板获取")
-        # self.browse_pcd_btn = QPushButton("本地选择")
-        # self.reload_pcd_btn = QPushButton("加载")
+       
         self.fetch_pcd_btn = QPushButton("更新点云地图")
         self.browse_pcd_btn = QPushButton("本地选择")
         self.reload_pcd_btn = QPushButton("加载")
@@ -4288,14 +4348,6 @@ class MainWindow(QMainWindow):
             self._start_camera_stream()
 
 
-    # def start_camera(self) -> None:
-    #     if getattr(self, "realsense_process", None) is not None:
-    #         process = self.realsense_process
-    #         if process.state() != QProcess.NotRunning:
-    #             QMessageBox.information(self, "提示", "RealSense 服务正在启动或停止，请稍候。")
-    #             return
-    #     self._start_camera_after_remote_start = True
-    #     self.start_remote_realsense_service()
 
     def start_camera(self) -> None:
         start_process = getattr(self, "realsense_process", None)
@@ -4317,6 +4369,14 @@ class MainWindow(QMainWindow):
                 "旧的视频显示线程还没有完全退出，暂不能重新启动。",
             )
             return
+
+        # self._start_camera_after_remote_start = True
+        # self.start_remote_realsense_service()
+        # self.record_camera_btn.setEnabled(True)
+
+        self.camera_service_started = False
+        self.camera_stream_has_frame = False
+        self.record_camera_btn.setEnabled(False)
 
         self._start_camera_after_remote_start = True
         self.start_remote_realsense_service()
@@ -4464,8 +4524,14 @@ class MainWindow(QMainWindow):
             )
             self.append_log(f"RealSense 服务启动失败，exit_code={exit_code}")
             return
+        
+        self.camera_service_started = True
+        self.camera_stream_has_frame = False
+        self.record_camera_btn.setEnabled(False)
+
         self.camera_status_label.setText("机器人端 RealSense 服务已启动，正在打开本地视频流。")
         self.append_log("机器人端 RealSense 服务已启动。")
+
         if self._start_camera_after_remote_start:
             self._start_camera_stream()
         self._start_camera_after_remote_start = False
@@ -4478,8 +4544,33 @@ class MainWindow(QMainWindow):
 
 
   
+    # def _start_camera_stream(self) -> None:
+    # # 启动新视频流前，必须先确认旧线程已经完全退出
+    #     if not self.stop_camera(clear_label=False):
+    #         QMessageBox.warning(
+    #             self,
+    #             "视频线程未退出",
+    #             "旧的视频显示线程还没有完全退出。\n"
+    #             "请稍等几秒后再重新启动，避免程序崩溃。",
+    #         )
+    #         return
+
+    #     url = self._camera_stream_url()
+
+    #     if hasattr(self, "camera_url_edit"):
+    #         self.camera_url_edit.setText(url)
+
+    #     self.camera_worker = MjpegStreamWorker(url, self)
+    #     self.camera_worker.frame_signal.connect(self._on_camera_frame)
+    #     self.camera_worker.log_signal.connect(self.append_log)
+    #     self.camera_worker.error_signal.connect(self._on_camera_error)
+    #     self.camera_worker.start()
+
+    #     self.camera_status_label.setText(f"正在显示视频流：{url}")
+    #     self.camera_label.clear()
+    #     self.camera_label.setText("正在连接 RealSense 视频流...")
+    
     def _start_camera_stream(self) -> None:
-    # 启动新视频流前，必须先确认旧线程已经完全退出
         if not self.stop_camera(clear_label=False):
             QMessageBox.warning(
                 self,
@@ -4488,6 +4579,11 @@ class MainWindow(QMainWindow):
                 "请稍等几秒后再重新启动，避免程序崩溃。",
             )
             return
+
+        self.camera_stream_has_frame = False
+
+        if not getattr(self, "camera_recording", False):
+            self.record_camera_btn.setEnabled(False)
 
         url = self._camera_stream_url()
 
@@ -4505,9 +4601,30 @@ class MainWindow(QMainWindow):
         self.camera_label.setText("正在连接 RealSense 视频流...")
 
 
+
+    # def _on_camera_frame(self, image: QImage) -> None:
+    #     if not hasattr(self, "camera_label"):
+    #         return
+
+    #     pixmap = QPixmap.fromImage(image)
+
+    #     scaled = pixmap.scaled(
+    #         self.camera_label.size(),
+    #         Qt.KeepAspectRatio,
+    #         Qt.SmoothTransformation,
+    #     )
+
+    #     self.camera_label.setPixmap(scaled)
+    #     self.camera_status_label.setText(f"正在实时显示：{self.camera_url_edit.text()}")
+    
     def _on_camera_frame(self, image: QImage) -> None:
         if not hasattr(self, "camera_label"):
             return
+
+        self.camera_stream_has_frame = True
+
+        if getattr(self, "camera_service_started", False) and not getattr(self, "camera_recording", False):
+            self.record_camera_btn.setEnabled(True)
 
         pixmap = QPixmap.fromImage(image)
 
@@ -4518,8 +4635,16 @@ class MainWindow(QMainWindow):
         )
 
         self.camera_label.setPixmap(scaled)
-        self.camera_status_label.setText(f"正在实时显示：{self.camera_url_edit.text()}")
-    
+
+        if getattr(self, "camera_recording", False):
+            self.camera_status_label.setText(
+                "正在实时显示并录制 color/depth 两路视频：\n"
+                f"color：{self.color_record_path}\n"
+                f"depth：{self.depth_record_path}"
+            )
+        else:
+            self.camera_status_label.setText(f"正在实时显示：{self.camera_url_edit.text()}")
+
 
     def _on_camera_error(self, text: str) -> None:
         if getattr(self, "_closing_app", False):
@@ -4533,6 +4658,9 @@ class MainWindow(QMainWindow):
 
     def stop_camera(self, clear_label: bool = True) -> bool:
         self.stop_camera_recording()
+        self.record_camera_btn.setEnabled(False)
+        self.camera_stream_has_frame = False
+
         worker = getattr(self, "camera_worker", None)
 
         if worker is not None:
@@ -4580,6 +4708,11 @@ class MainWindow(QMainWindow):
     
 
     def stop_remote_realsense_service(self, detached: bool = False) -> None:
+        self.stop_camera_recording()
+        self.record_camera_btn.setEnabled(False)
+        self.camera_service_started = False
+        self.camera_stream_has_frame = False
+
         # 关键：必须先停本地视频线程，再停机器人端 8080
         if not self.stop_camera(clear_label=True):
             QMessageBox.warning(
@@ -5134,25 +5267,7 @@ class MainWindow(QMainWindow):
         self.log_edit.append(f"[{now_text()}] {text}")
 
 
-    # def closeEvent(self, event) -> None:
-    #     if hasattr(self, "navigation_window") and self.navigation_window is not None:
-    #         self.navigation_window.close()
-
-    #     process = getattr(self, "pcd_download_process", None)
-    #     if process is not None and process.state() != QProcess.NotRunning:
-    #         process.terminate()
-
-    #         if not process.waitForFinished(1000):
-    #             process.kill()
-
-    #     self.stop_lidar_state()
-
-    #     if hasattr(self, "camera_label"):
-    #         self.stop_camera()
-    #         self.stop_remote_realsense_service(detached=True)
-
-    #     self.client.disconnect_robot()
-    #     super().closeEvent(event)
+   
     def closeEvent(self, event):
         self._fast_close_cleanup()
         event.accept()
