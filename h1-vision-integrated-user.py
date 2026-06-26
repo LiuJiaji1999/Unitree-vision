@@ -3459,12 +3459,6 @@ class MainWindow(QMainWindow):
         self.record_camera_btn.setEnabled(False)
         self.record_camera_btn.clicked.connect(self.toggle_camera_recording)
 
-        # self.camera_recording = False
-        # self.camera_record_writer = None
-        # self.camera_record_path = None
-        # self.camera_record_size = None
-        # self.camera_record_fps = 20.0
-        # self.camera_latest_frame_bgr = None
 
         self.camera_recording = False
         self.camera_record_fps = 20.0
@@ -3663,124 +3657,6 @@ class MainWindow(QMainWindow):
             self.append_log(f"录制完成：{path}，写入帧数：{frames}")
         else:
             self.append_log(f"录制结束但未写入有效帧：{path}")
-
-
-
-    # def start_camera_recording(self):
-    #     if getattr(self, "camera_recording", False):
-    #         return
-      
-
-    #     if getattr(self, "camera_latest_frame_bgr", None) is None:
-    #         self.camera_status_label.setText("当前还没有相机画面，启动相机并显示画面后才能录制。")
-    #         return
-
-    #     save_dir = Path.cwd() / "camera_recordings"
-    #     save_dir.mkdir(parents=True, exist_ok=True)
-
-    #     camera_kind = "camera"
-    #     if hasattr(self, "camera_kind_combo"):
-    #         camera_kind = self.camera_kind_combo.currentData() or "camera"
-
-    #     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    #     self.camera_record_path = save_dir / f"realsense_{camera_kind}_{timestamp}.mp4"
-
-    #     self.camera_recording = True
-    #     self.camera_record_writer = None
-    #     self.camera_record_size = None
-
-    #     self.record_camera_btn.setText("录制中")
-    #     self.record_camera_btn.setStyleSheet(
-    #         "background-color: #dc2626; color: white; font-weight: 800;"
-    #     )
-
-    #     self.camera_status_label.setText(
-    #         f"正在录制，视频将保存到本地：{self.camera_record_path}"
-    #     )
-
-
-    # def stop_camera_recording(self):
-    #     if not getattr(self, "camera_recording", False) and self.camera_record_writer is None:
-    #         return
-
-    #     self.camera_recording = False
-
-    #     if self.camera_record_writer is not None:
-    #         self.camera_record_writer.release()
-    #         self.camera_record_writer = None
-
-    #     saved_path = self.camera_record_path
-
-    #     self.record_camera_btn.setText("录制")
-    #     self.record_camera_btn.setStyleSheet("")
-
-    #     if saved_path and Path(saved_path).exists():
-    #         self.camera_status_label.setText(f"录制已停止，视频已保存到：{saved_path}")
-    #     else:
-    #         self.camera_status_label.setText("录制已停止，但没有写入有效视频帧。")
-
-
-    # def _ensure_camera_record_writer(self, frame_bgr):
-    #     h, w = frame_bgr.shape[:2]
-
-    #     self.camera_record_size = (w, h)
-
-    #     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    #     self.camera_record_writer = cv2.VideoWriter(
-    #         str(self.camera_record_path),
-    #         fourcc,
-    #         self.camera_record_fps,
-    #         self.camera_record_size,
-    #     )
-
-    #     if not self.camera_record_writer.isOpened():
-    #         self.camera_record_writer = None
-    #         self.camera_recording = False
-    #         self.record_camera_btn.setText("录制")
-    #         self.record_camera_btn.setStyleSheet("")
-    #         self.camera_status_label.setText("录制失败：无法创建本地视频文件。")
-
-
-    # def _write_camera_record_frame(self, frame, frame_is_rgb=False):
-    #     """
-    #     frame: 当前相机帧，建议传 OpenCV 解码后的 numpy.ndarray
-    #     frame_is_rgb:
-    #         False 表示 frame 是 BGR，OpenCV 默认格式
-    #         True 表示 frame 是 RGB，Qt 显示常用格式
-    #     """
-    #     if not getattr(self, "camera_recording", False):
-    #         return
-
-    #     if frame is None:
-    #         return
-
-    #     if len(frame.shape) == 2:
-    #         frame_bgr = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-    #     elif frame.shape[2] == 4:
-    #         if frame_is_rgb:
-    #             frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
-    #         else:
-    #             frame_bgr = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
-    #     else:
-    #         if frame_is_rgb:
-    #             frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-    #         else:
-    #             frame_bgr = frame
-
-    #     if frame_bgr.dtype != "uint8":
-    #         frame_bgr = frame_bgr.astype("uint8")
-
-    #     if self.camera_record_writer is None:
-    #         self._ensure_camera_record_writer(frame_bgr)
-
-    #     if self.camera_record_writer is None:
-    #         return
-
-    #     h, w = frame_bgr.shape[:2]
-    #     if self.camera_record_size != (w, h):
-    #         frame_bgr = cv2.resize(frame_bgr, self.camera_record_size)
-
-    #     self.camera_record_writer.write(frame_bgr)
 
 
 
@@ -4601,21 +4477,6 @@ class MainWindow(QMainWindow):
         self.camera_label.setText("正在连接 RealSense 视频流...")
 
 
-
-    # def _on_camera_frame(self, image: QImage) -> None:
-    #     if not hasattr(self, "camera_label"):
-    #         return
-
-    #     pixmap = QPixmap.fromImage(image)
-
-    #     scaled = pixmap.scaled(
-    #         self.camera_label.size(),
-    #         Qt.KeepAspectRatio,
-    #         Qt.SmoothTransformation,
-    #     )
-
-    #     self.camera_label.setPixmap(scaled)
-    #     self.camera_status_label.setText(f"正在实时显示：{self.camera_url_edit.text()}")
     
     def _on_camera_frame(self, image: QImage) -> None:
         if not hasattr(self, "camera_label"):
