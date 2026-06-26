@@ -89,7 +89,7 @@ def prepare_environment(skip_install: bool = False) -> None:
     # 在离线环境中可先准备 wheelhouse，然后用 --skip-install 跳过。
     required = [
         ("PyQt5", "PyQt5"),
-        ("cv2", "opencv-python"),
+        ("cv2", "opencv-python-headless"),
         ("numpy", "numpy"),
         ("matplotlib", "matplotlib"),
         ("cyclonedds", "cyclonedds==0.10.2"),
@@ -99,11 +99,13 @@ def prepare_environment(skip_install: bool = False) -> None:
         pip_install(missing)
 
 
+
 def create_runtime_hook() -> None:
     PATCHED_ENTRY_DIR.mkdir(parents=True, exist_ok=True)
     RUNTIME_HOOK.write_text(
         """# -*- coding: utf-8 -*-
 import os
+import sys
 import tempfile
 
 os.environ.setdefault("QT_API", "pyqt5")
@@ -115,6 +117,25 @@ os.environ.setdefault(
     "MPLCONFIGDIR",
     os.path.join(tempfile.gettempdir(), "h1vision_matplotlib")
 )
+
+# 关键修复：
+# 强制 Qt 使用 PyQt5 自己的插件目录，
+# 避免误加载 cv2/qt/plugins/platforms/libqxcb.so 导致 xcb 崩溃。
+if getattr(sys, "frozen", False):
+    app_dir = os.path.dirname(sys.executable)
+else:
+    app_dir = os.getcwd()
+
+pyqt_plugins = os.path.join(app_dir, "PyQt5", "Qt5", "plugins")
+pyqt_platforms = os.path.join(pyqt_plugins, "platforms")
+
+if os.path.isdir(pyqt_plugins):
+    os.environ["QT_PLUGIN_PATH"] = pyqt_plugins
+
+if os.path.isdir(pyqt_platforms):
+    os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = pyqt_platforms
+
+os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
 """,
         encoding="utf-8",
     )
@@ -202,6 +223,15 @@ def copy_runtime_editable_files() -> Path:
     dist_dir = Path("dist") / APP_NAME
     if not dist_dir.exists():
         raise SystemExit(f"打包失败：未找到 {dist_dir}")
+    
+ # 关键修复：
+    # 删除 OpenCV/cv2 自带或残留的 Qt 插件目录。
+    # 否则 Qt 可能优先加载 cv2/qt/plugins/platforms/libqxcb.so，
+    # 导致 “Could not load the Qt platform plugin xcb”。
+    bad_cv2_qt = dist_dir / "cv2" / "qt"
+    if bad_cv2_qt.exists():
+        shutil.rmtree(bad_cv2_qt)
+        print(f"已删除冲突目录：{bad_cv2_qt}")
 
     # 把配置/账号/地图文件再复制一份到 exe 同级，确保 APP_DIR 指向它们。
     for file_name in DATA_FILES:
@@ -212,6 +242,7 @@ def copy_runtime_editable_files() -> Path:
     readme = dist_dir / "README_RUN.txt"
     readme.write_text(
         f"""H1Vision 运行说明
+
 
 Linux:
   chmod +x ./{APP_NAME}
