@@ -43,7 +43,7 @@ H1_SHOW_NATIVE_CONSOLE=1 ./H1Vision
 将下面这个文件拷贝到目标 Ubuntu 电脑：
     dist/h1vision_1.0.0_amd64.deb
 在目标电脑执行：
-    sudo apt install ./h1vision_1.0.0_amd64.deb
+    sudo apt install ./dist/h1vision_1.0.0_amd64.deb
 如果是在当前开发电脑安装，可执行：
     cd ~/Desktop/unitree_sdk2_python-master
     sudo apt install ./dist/h1vision_1.0.0_amd64.deb
@@ -70,7 +70,7 @@ rm -rf build dist build_packaging_entry H1Vision.spec
 ./build_linux.sh --deb
 
 然后在目标电脑重新安装：
-sudo apt install ./h1vision_1.0.0_amd64.deb
+sudo apt install ./dist/h1vision_1.0.0_amd64.deb
 sudo chown -R $USER:$USER /opt/h1vision
 
 安装后再次启动：
