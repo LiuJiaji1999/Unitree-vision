@@ -1,5 +1,13 @@
 ### 客户端封装
 ```shell
+cd ~/Desktop/unitree_sdk2_python-master
+unset QT_PLUGIN_PATH
+unset QT_QPA_PLATFORM_PLUGIN_PATH
+unset QT_QPA_PLATFORM
+unset PYTHONPATH
+unset LD_LIBRARY_PATH
+H1_SHOW_NATIVE_CONSOLE=1 python H1-vision.py
+
 # 将其封装成deb/exe，无论linux系统/windows系统都可安装运行！
 # 开始一直提示‘已中止（核心以转存）’改完package_unitree_vision.py后的重新打包流程 
 

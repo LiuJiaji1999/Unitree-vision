@@ -6,3 +6,67 @@ QProcess: Destroyed while process ("bash") is still running.
 [Reader] take sample error
 
 ===== H1 native console redirected at 2026-06-26 11:44:36 =====
+
+===== H1 native console redirected at 2026-06-30 19:48:50 =====
+QObject::moveToThread: Current thread (0xcf5e9f0) is not the object's thread (0xce994a0).
+Cannot move to target thread (0xcf5e9f0)
+
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "/home/epai/anaconda3/envs/vision/lib/python3.9/site-packages/cv2/qt/plugins" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: xcb, eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, webgl.
+
+
+===== H1 native console redirected at 2026-06-30 19:52:27 =====
+QObject::moveToThread: Current thread (0xf9d9400) is not the object's thread (0xffaa0b0).
+Cannot move to target thread (0xf9d9400)
+
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "/home/epai/anaconda3/envs/vision/lib/python3.9/site-packages/cv2/qt/plugins" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: xcb, eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, webgl.
+
+
+===== H1 native console redirected at 2026-07-01 16:14:09 =====
+QObject::moveToThread: Current thread (0x3dc38600) is not the object's thread (0x3e66c590).
+Cannot move to target thread (0x3dc38600)
+
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "/home/epai/anaconda3/envs/vision/lib/python3.9/site-packages/cv2/qt/plugins" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: xcb, eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, webgl.
+
+
+===== H1 native console redirected at 2026-07-01 16:14:40 =====
+QObject::moveToThread: Current thread (0x2a8cb600) is not the object's thread (0x2afc05a0).
+Cannot move to target thread (0x2a8cb600)
+
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "/home/epai/anaconda3/envs/vision/lib/python3.9/site-packages/cv2/qt/plugins" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: xcb, eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, webgl.
+
+
+===== H1 native console redirected at 2026-07-01 16:15:45 =====
+QObject::moveToThread: Current thread (0x5099600) is not the object's thread (0x5624040).
+Cannot move to target thread (0x5099600)
+
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "/home/epai/anaconda3/envs/vision/lib/python3.9/site-packages/cv2/qt/plugins" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: xcb, eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, webgl.
+
+
+===== H1 native console redirected at 2026-07-01 16:16:46 =====
+QObject::moveToThread: Current thread (0xcefaec0) is not the object's thread (0xd4eb4b0).
+Cannot move to target thread (0xcefaec0)
+
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "/home/epai/anaconda3/envs/vision/lib/python3.9/site-packages/cv2/qt/plugins" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: xcb, eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, webgl.
+
+
+===== H1 native console redirected at 2026-07-01 18:18:50 =====
+1782901133.491581 [0] LowStateWo: enx9c69d3565ef9: does not match an available interface.
+[ChannelFactory] create domain error. msg: Occurred upon initialisation of a cyclonedds.domain.Domain
