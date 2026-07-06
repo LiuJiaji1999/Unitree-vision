@@ -1,3 +1,28 @@
+### python 提示 已中止
+```bash
+conda activate vision
+python -m pip uninstall -y opencv-python opencv-contrib-python opencv-python-headless
+conda remove -y opencv py-opencv libopencv || true
+PYVER=$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+rm -rf "$CONDA_PREFIX/lib/python$PYVER/site-packages/cv2"
+rm -rf "$CONDA_PREFIX/lib/python$PYVER/site-packages/opencv_python"*
+rm -rf "$CONDA_PREFIX/lib/python$PYVER/site-packages/opencv_contrib_python"*
+python -m pip install --no-cache-dir opencv-python-headless
+
+## 然后检查
+python - <<'PY'
+import cv2
+import os
+cv2_dir = os.path.dirname(cv2.__file__)
+print("cv2 path:", cv2.__file__)
+print("cv2 qt exists:", os.path.exists(os.path.join(cv2_dir, "qt")))
+PY
+# 理想结果
+cv2 qt exists: False
+
+python H1-vision.py
+```
+
 ### 客户端封装与部署说明
 ```bash
 #### 一、本地源码测试

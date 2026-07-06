@@ -70,3 +70,65 @@ Available platform plugins are: xcb, eglfs, linuxfb, minimal, minimalegl, offscr
 ===== H1 native console redirected at 2026-07-01 18:18:50 =====
 1782901133.491581 [0] LowStateWo: enx9c69d3565ef9: does not match an available interface.
 [ChannelFactory] create domain error. msg: Occurred upon initialisation of a cyclonedds.domain.Domain
+
+===== H1 native console redirected at 2026-07-06 12:04:43 =====
+QObject::moveToThread: Current thread (0x115adbe0) is not the object's thread (0x11ce34b0).
+Cannot move to target thread (0x115adbe0)
+
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "/home/epai/anaconda3/envs/vision/lib/python3.9/site-packages/cv2/qt/plugins" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: xcb, eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, webgl.
+
+
+===== H1 native console redirected at 2026-07-06 12:37:34 =====
+QObject::moveToThread: Current thread (0x3910be0) is not the object's thread (0x3f26580).
+Cannot move to target thread (0x3910be0)
+
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "/home/epai/anaconda3/envs/vision/lib/python3.9/site-packages/cv2/qt/plugins" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: xcb, eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, webgl.
+
+
+===== H1 native console redirected at 2026-07-06 13:14:27 =====
+QObject::moveToThread: Current thread (0x1a2ebbe0) is not the object's thread (0x1a51d840).
+Cannot move to target thread (0x1a2ebbe0)
+
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "/home/epai/anaconda3/envs/vision/lib/python3.9/site-packages/cv2/qt/plugins" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: xcb, eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, webgl.
+
+
+===== H1 native console redirected at 2026-07-06 13:22:16 =====
+QObject::moveToThread: Current thread (0x279b5e90) is not the object's thread (0x2810c1a0).
+Cannot move to target thread (0x279b5e90)
+
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "/home/epai/anaconda3/envs/vision/lib/python3.9/site-packages/cv2/qt/plugins" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: xcb, eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, webgl.
+
+
+===== H1 native console redirected at 2026-07-06 13:25:49 =====
+QObject::moveToThread: Current thread (0xa4d0be0) is not the object's thread (0xa8a5850).
+Cannot move to target thread (0xa4d0be0)
+
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "/home/epai/anaconda3/envs/vision/lib/python3.9/site-packages/cv2/qt/plugins" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: xcb, eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, webgl.
+
+
+===== H1 native console redirected at 2026-07-06 22:28:36 =====
+1783348119.370335 [0] LowStateWo: enx9c69d3565ef9: does not match an available interface.
+[ChannelFactory] create domain error. msg: Occurred upon initialisation of a cyclonedds.domain.Domain
+1783348136.658589 [0] LowStateWo: enx9c69d3565ef9: does not match an available interface.
+[ChannelFactory] create domain error. msg: Occurred upon initialisation of a cyclonedds.domain.Domain
+1783348137.225197 [0] LowStateWo: enx9c69d3565ef9: does not match an available interface.
+[ChannelFactory] create domain error. msg: Occurred upon initialisation of a cyclonedds.domain.Domain
+1783348137.385668 [0] LowStateWo: enx9c69d3565ef9: does not match an available interface.
+[ChannelFactory] create domain error. msg: Occurred upon initialisation of a cyclonedds.domain.Domain
+
+===== H1 native console redirected at 2026-07-06 22:29:09 =====

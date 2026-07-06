@@ -72,6 +72,23 @@ def pip_install(args: list[str]) -> None:
 def module_exists(name: str) -> bool:
     return importlib.util.find_spec(name) is not None
 
+def clean_cv2_qt_plugins() -> None:
+    """
+    清理当前 Python/conda 环境中 OpenCV 残留的 Qt 插件目录。
+    该目录会导致 PyQt5 程序运行时误加载 cv2/qt/plugins/libqxcb.so，
+    从而出现 Could not load the Qt platform plugin "xcb"。
+    """
+    spec = importlib.util.find_spec("cv2")
+    if spec is None or not spec.origin:
+        return
+
+    cv2_dir = Path(spec.origin).resolve().parent
+    bad_qt_dir = cv2_dir / "qt"
+
+    if bad_qt_dir.exists():
+        shutil.rmtree(bad_qt_dir)
+        print(f"已清理当前环境中的 OpenCV Qt 插件目录：{bad_qt_dir}")
+
 
 def prepare_environment(skip_install: bool = False) -> None:
     if skip_install:
@@ -194,7 +211,7 @@ def build_pyinstaller(debug_console: bool = False) -> None:
         "--collect-all", "cyclonedds",
         "--collect-all", "PyQt5",
         "--collect-all", "matplotlib",
-        "--collect-all", "cv2",
+        # "--collect-all", "cv2",
         "--hidden-import", "unitree_sdk2py.core.channel",
         "--hidden-import", "unitree_sdk2py.idl.unitree_go.msg.dds_",
         "--hidden-import", "unitree_sdk2py.idl.unitree_hg.msg.dds_",
@@ -224,7 +241,7 @@ def copy_runtime_editable_files() -> Path:
     if not dist_dir.exists():
         raise SystemExit(f"打包失败：未找到 {dist_dir}")
     
- # 关键修复：
+    # 关键修复：
     # 删除 OpenCV/cv2 自带或残留的 Qt 插件目录。
     # 否则 Qt 可能优先加载 cv2/qt/plugins/platforms/libqxcb.so，
     # 导致 “Could not load the Qt platform plugin xcb”。
@@ -361,6 +378,8 @@ def main() -> int:
     print(f"当前系统：{platform.platform()}")
 
     prepare_environment(skip_install=args.skip_install)
+    # 防止当前 conda 环境中的 cv2/qt/plugins 污染源码运行和打包结果
+    clean_cv2_qt_plugins()
     build_pyinstaller(debug_console=args.debug_console)
     dist_dir = copy_runtime_editable_files()
     archive_dist(dist_dir)
