@@ -132,3 +132,226 @@ Available platform plugins are: xcb, eglfs, linuxfb, minimal, minimalegl, offscr
 [ChannelFactory] create domain error. msg: Occurred upon initialisation of a cyclonedds.domain.Domain
 
 ===== H1 native console redirected at 2026-07-06 22:29:09 =====
+
+===== H1 native console redirected at 2026-07-06 22:41:23 =====
+
+===== H1 native console redirected at 2026-07-07 09:58:42 =====
+
+===== H1 native console redirected at 2026-07-07 10:02:05 =====
+
+===== H1 native console redirected at 2026-07-07 10:03:59 =====
+1783389858.083467 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783389866.083544 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+
+===== H1 native console redirected at 2026-07-07 10:25:17 =====
+1783391169.506307 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391169.506372 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391169.506402 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391169.506415 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391169.506428 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391169.506442 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391169.606384 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391169.606433 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391169.606451 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391169.606467 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391169.606483 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391169.606505 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391169.606528 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391169.606551 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391169.606571 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391169.606593 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391169.606614 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391169.606635 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391169.706422 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391169.706475 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391169.706492 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391169.706508 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391169.706529 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391169.706545 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391169.806504 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391169.806557 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391169.806575 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391169.806592 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391169.806608 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391169.806641 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391169.906588 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391169.906650 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391169.906664 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391169.906672 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391169.906680 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391169.906689 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391170.006638 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391170.006677 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391170.006690 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391170.006700 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391170.006708 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391170.006738 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391170.106722 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391170.106778 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391170.106798 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391170.106813 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391170.106835 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391170.106855 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391170.306783 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391170.306823 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391170.306838 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391170.306852 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391170.306871 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391170.306884 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391170.506861 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391170.506918 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391170.506942 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391170.506971 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391170.506993 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391170.507027 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391170.906944 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391170.906995 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391170.907010 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391170.907040 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391170.907054 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391170.907067 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391171.307012 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391171.307069 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391171.307093 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391171.307105 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391171.307118 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391171.307136 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391172.107151 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391177.606478 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391177.606538 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391177.606555 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391177.606570 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391177.606592 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391177.606612 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391185.606589 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391185.606671 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391185.606691 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391185.606709 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391185.606739 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391185.606778 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391193.606665 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391193.606725 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391193.606743 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391193.606758 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391193.606773 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391193.606788 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391201.606774 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391201.606846 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391201.606872 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391201.606894 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391201.606917 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391201.606946 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391209.606888 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391209.606959 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391209.606984 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391209.607031 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391209.607074 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391209.607103 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391217.606972 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391217.607047 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391217.607076 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391217.607100 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391217.607136 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391217.607155 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391225.607069 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391225.607137 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391225.607157 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391225.607174 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391225.607190 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391225.614869 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391233.607140 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391233.607213 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391233.607236 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391233.607257 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391233.607289 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391233.607314 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391241.607209 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391241.607278 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391241.607299 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391241.607317 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391241.607340 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391241.607365 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391249.607312 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391249.607390 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391249.607417 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391249.607445 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391249.607474 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391249.607501 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391257.607430 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391257.607508 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391257.607535 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391257.607558 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391257.607581 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391257.607602 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391265.607531 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391265.607604 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391265.607630 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391265.607659 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391265.607692 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391265.607724 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391273.607911 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391273.608091 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391273.608130 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391273.608162 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391273.608198 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391273.608235 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391281.607977 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391281.608075 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391281.608105 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391281.608125 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391281.608152 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391281.608174 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391289.608109 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391289.608194 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391289.608214 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391289.608244 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391289.608269 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391289.608296 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+1783391297.608118 [0]        tev: ddsi_udp_conn_write to udp/239.255.0.1:7400 failed with retcode -1
+1783391297.608174 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:39775 failed with retcode -1
+1783391297.608186 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:46282 failed with retcode -1
+1783391297.608197 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:50959 failed with retcode -1
+1783391297.608206 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57323 failed with retcode -1
+1783391297.608217 [0]        tev: ddsi_udp_conn_write to udp/192.168.123.162:57502 failed with retcode -1
+
+===== H1 native console redirected at 2026-07-07 10:28:22 =====
+
+===== H1 native console redirected at 2026-07-07 10:31:16 =====
+
+===== H1 native console redirected at 2026-07-07 10:31:44 =====
+[Reader] take sample error
+
+===== H1 native console redirected at 2026-07-07 10:33:04 =====
+[Reader] take sample error
+
+===== H1 native console redirected at 2026-07-07 10:36:23 =====
+
+===== H1 native console redirected at 2026-07-07 10:36:43 =====
+QProcess: Destroyed while process ("ping") is still running.
+
+===== H1 native console redirected at 2026-07-07 10:39:03 =====
+QProcess: Destroyed while process ("bash") is still running.
+QProcess: Destroyed while process ("ping") is still running.
+
+===== H1 native console redirected at 2026-07-07 10:40:03 =====
+
+===== H1 native console redirected at 2026-07-07 10:42:34 =====
+[Reader] take sample error
+[Reader] take sample error
+
+===== H1 native console redirected at 2026-07-07 10:44:01 =====
+
+===== H1 native console redirected at 2026-07-07 10:46:25 =====
+1783392389.209629 [0] LowStateWo: enx9c69d3565ef9: does not match an available interface.
+[ChannelFactory] create domain error. msg: Occurred upon initialisation of a cyclonedds.domain.Domain
+
+===== H1 native console redirected at 2026-07-07 10:51:26 =====
+1783392690.751874 [0] LowStateWo: enx9c69d3565ef9: does not match an available interface.
+[ChannelFactory] create domain error. msg: Occurred upon initialisation of a cyclonedds.domain.Domain
+[Reader] take sample error
+QProcess: Destroyed while process ("bash") is still running.
+
+===== H1 native console redirected at 2026-07-07 10:56:02 =====
+1783392964.876225 [0] LowStateWo: enx9c69d3565ef9: does not match an available interface.
+[ChannelFactory] create domain error. msg: Occurred upon initialisation of a cyclonedds.domain.Domain
+[Reader] take sample error

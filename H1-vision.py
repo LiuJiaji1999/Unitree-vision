@@ -420,8 +420,8 @@ class RobotConfig:
     robot_ip: str = "192.168.123.162"
     port: int = 8080
 
-    # 无线/有线都建议使用 auto：程序会根据 robot_ip 自动选择到机器人 IP 的本机网卡。
-    # 也可以手动填写 wlan0 / wlp* / enx* / eth* 等接口名。
+    # 支持 auto / wired / wireless / 具体网卡名。
+    # auto 自动按机器人 IP 路由选择；wired/有线 强制有线；wireless/无线 强制无线。
     network_interface: str = "auto"
 
     protocol: str = "sdk2"  # mock / sdk2
@@ -455,15 +455,140 @@ _DDS_FACTORY_INITIALIZED = False
 _DDS_FACTORY_IFACE = ""
 
 
-_AUTO_IFACE_VALUES = {"", "auto", "自动", "wifi", "wi-fi", "wireless", "无线"}
+_AUTO_IFACE_VALUES = {"", "auto", "自动", "自动选择"}
+_WIRED_IFACE_VALUES = {"wired", "wire", "ethernet", "eth", "有线", "有线优先", "网线"}
+_WIRELESS_IFACE_VALUES = {"wireless", "wifi", "wi-fi", "wlan", "无线", "无线优先"}
+_VIRTUAL_IFACE_PREFIXES = (
+    "lo", "docker", "br-", "veth", "virbr", "vmnet", "tun", "tap",
+    "zt", "tailscale", "wg", "ppp", "dummy", "bond", "team",
+)
 
 
 def _local_interface_names() -> List[str]:
-    """返回本机可见网卡名，用于判断旧配置里的有线网卡是否已经不存在。"""
+    """返回本机可见网卡名。"""
     try:
         return [name for _, name in socket.if_nameindex()]
     except Exception:
         return []
+
+
+def classify_network_interface(name: str) -> str:
+    """
+    粗略识别网卡类型，供 DDS 绑定和界面下拉选择使用。
+
+    返回值：wired / wireless / virtual / loopback / other。
+    Linux 下优先看 /sys/class/net/<iface>/wireless；其他系统退回按名称前缀判断。
+    """
+    name = (name or "").strip()
+    lower = name.lower()
+
+    if not name:
+        return "other"
+    if lower == "lo":
+        return "loopback"
+
+    if lower.startswith(("wl", "wlan", "wlp", "wlo", "wlx")):
+        return "wireless"
+
+    wireless_path = Path("/sys/class/net") / name / "wireless"
+    if wireless_path.exists():
+        return "wireless"
+
+    if lower.startswith(("eth", "enp", "eno", "ens", "enx", "em")):
+        return "wired"
+
+    if lower.startswith(_VIRTUAL_IFACE_PREFIXES):
+        return "virtual"
+
+    return "other"
+
+
+def network_interface_type_label(kind: str) -> str:
+    return {
+        "wired": "有线",
+        "wireless": "无线",
+        "virtual": "虚拟",
+        "loopback": "回环",
+        "other": "其他",
+    }.get(kind, "其他")
+
+
+def _interface_operstate(name: str) -> str:
+    try:
+        state = (Path("/sys/class/net") / name / "operstate").read_text(encoding="utf-8").strip()
+        return state or "unknown"
+    except Exception:
+        return "unknown"
+
+
+def _interface_ipv4(name: str) -> str:
+    try:
+        output = subprocess.check_output(
+            ["ip", "-4", "-o", "addr", "show", "dev", name],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=1,
+        )
+        match = re.search(r"\binet\s+(\d+\.\d+\.\d+\.\d+/\d+)", output)
+        if match:
+            return match.group(1)
+    except Exception:
+        pass
+    return ""
+
+
+def list_network_interface_details() -> List[Dict[str, str]]:
+    """列出本机网卡，包含名称、类型、状态、IPv4，供 UI 和自动选择复用。"""
+    details: List[Dict[str, str]] = []
+    for name in _local_interface_names():
+        kind = classify_network_interface(name)
+        details.append({
+            "name": name,
+            "kind": kind,
+            "kind_label": network_interface_type_label(kind),
+            "state": _interface_operstate(name),
+            "ipv4": _interface_ipv4(name),
+        })
+
+    # 常用物理网卡优先显示：有线、无线、其他、虚拟、回环；UP 和有 IPv4 的排前面。
+    order = {"wired": 0, "wireless": 1, "other": 2, "virtual": 3, "loopback": 4}
+    details.sort(key=lambda item: (
+        order.get(item["kind"], 9),
+        item["state"] != "up",
+        not bool(item["ipv4"]),
+        item["name"],
+    ))
+    return details
+
+
+def choose_interface_by_kind(kind: str, robot_ip: str, log_func=None) -> str:
+    """按 有线/无线 类型选择一张真实存在的本机网卡。"""
+    route_iface = detect_route_interface(robot_ip, log_func)
+    if route_iface and classify_network_interface(route_iface) == kind:
+        if log_func:
+            log_func(
+                f"已按{network_interface_type_label(kind)}模式选择到机器人 {robot_ip} 的路由网卡：{route_iface}"
+            )
+        return route_iface
+
+    details = [
+        item for item in list_network_interface_details()
+        if item["kind"] == kind and item["name"] != "lo"
+    ]
+
+    if details:
+        selected = details[0]["name"]
+        if log_func:
+            log_func(
+                f"已按{network_interface_type_label(kind)}模式选择本机网卡：{selected}"
+            )
+        return selected
+
+    available = ", ".join(item["name"] for item in list_network_interface_details()) or "无"
+    raise RuntimeError(
+        f"未找到可用{network_interface_type_label(kind)}网卡。当前本机网卡：{available}。"
+        f"请检查网线/Wi-Fi 是否连接，或在“本机网卡/接口”中直接选择具体网卡名。"
+    )
 
 
 def detect_route_interface(robot_ip: str, log_func=None) -> str:
@@ -512,12 +637,13 @@ def detect_route_interface(robot_ip: str, log_func=None) -> str:
 
 def resolve_dds_interface(robot_ip: str, requested_iface: str, log_func=None) -> str:
     """
-    把界面配置里的网卡名转换成 SDK2 真正要绑定的网卡。
+    把界面配置里的网卡选择转换成 SDK2 真正要绑定的网卡。
 
-    规则：
-    1. 空 / auto / 自动 / wifi / wireless / 无线：自动选择访问 robot_ip 的路由网卡。
-    2. 如果仍填着旧有线网卡，但系统路由显示机器人走的是另一张网卡，则自动切到路由网卡。
-    3. 如果检测失败，返回用户填写值；用户填写为空则让 SDK 使用默认接口。
+    支持：
+    - auto / 自动：按 robot_ip 的系统路由自动选择；
+    - wired / 有线：只选择有线网卡；
+    - wireless / 无线：只选择无线网卡；
+    - 具体网卡名：严格尊重用户选择，不再因为路由不同而偷偷切换。
     """
     requested_iface = (requested_iface or "").strip()
     requested_key = requested_iface.lower()
@@ -533,34 +659,34 @@ def resolve_dds_interface(robot_ip: str, requested_iface: str, log_func=None) ->
             log_func("未能自动检测到本机网卡，将使用 Unitree SDK2 默认接口。")
         return ""
 
+    if requested_key in _WIRED_IFACE_VALUES:
+        return choose_interface_by_kind("wired", robot_ip, log_func)
+
+    if requested_key in _WIRELESS_IFACE_VALUES:
+        return choose_interface_by_kind("wireless", robot_ip, log_func)
+
     local_ifaces = set(_local_interface_names())
 
     if requested_iface and local_ifaces and requested_iface not in local_ifaces:
+        available = ", ".join(sorted(local_ifaces))
         if route_iface:
             if log_func:
                 log_func(
-                    f"配置的网卡 {requested_iface} 在本机不存在，已自动改用到机器人 IP 的路由网卡：{route_iface}"
+                    f"配置的网卡 {requested_iface} 在本机不存在，已临时改用到机器人 IP 的路由网卡：{route_iface}。"
+                    "建议在下拉框中重新选择当前电脑真实网卡并保存配置。"
                 )
             return route_iface
 
-        if log_func:
-            log_func(f"配置的网卡 {requested_iface} 在本机不存在，且自动检测失败。")
+        raise RuntimeError(
+            f"配置的网卡 {requested_iface} 在本机不存在。当前本机网卡：{available or '无'}。"
+            "请在“系统连接 → 本机网卡/接口”中选择 auto、有线、无线或真实网卡名。"
+        )
 
-    if route_iface and requested_iface != route_iface:
-        old_wired_prefix = ("enx", "eth", "enp", "eno")
-        if requested_iface.startswith(old_wired_prefix):
-            if log_func:
-                log_func(
-                    f"检测到当前到机器人 {robot_ip} 的路由网卡是 {route_iface}，"
-                    f"不是旧配置的有线网卡 {requested_iface}；已自动切换为 {route_iface}。"
-                )
-            return route_iface
-
-        if log_func:
-            log_func(
-                f"提示：系统路由到机器人 {robot_ip} 使用 {route_iface}，"
-                f"当前手动配置为 {requested_iface}。如收不到 LowState，可将网卡改为 auto。"
-            )
+    if route_iface and requested_iface and requested_iface != route_iface and log_func:
+        log_func(
+            f"提示：系统路由到机器人 {robot_ip} 使用 {route_iface}，"
+            f"当前手动指定为 {requested_iface}；程序将严格使用手动指定网卡。"
+        )
 
     return requested_iface
 
@@ -569,8 +695,8 @@ def ensure_dds_initialized(iface: str, log_func=None, robot_ip: str = "") -> Non
     """
     避免 LowStateWorker 和 LidarStateWorker 重复初始化 ChannelFactory。
 
-    无线连接时不要再固定绑定旧有线网卡。
-    iface 填 auto/空时，会根据 robot_ip 自动选择系统路由实际使用的网卡。
+    支持 auto / wired / wireless / 具体网卡名。
+    注意：Unitree DDS 在一个进程中只能初始化一次；切换有线/无线后需要重启客户端。
     """
     global _DDS_FACTORY_INITIALIZED, _DDS_FACTORY_IFACE
 
@@ -3925,8 +4051,25 @@ class MainWindow(QMainWindow):
         self.port_spin.setRange(1, 65535)
         self.port_spin.setValue(8080)
 
-        self.iface_edit = QLineEdit("auto")
-        self.iface_edit.setPlaceholderText("auto，或填写 wlan0 / wlp* / enx* / eth*")
+        self.iface_edit = QComboBox()
+        self.iface_edit.setEditable(True)
+        self.iface_edit.setInsertPolicy(QComboBox.NoInsert)
+        self.iface_edit.setMinimumWidth(360)
+        if self.iface_edit.lineEdit():
+            self.iface_edit.lineEdit().setPlaceholderText("选择 auto/有线/无线，或输入具体网卡名")
+        self._refresh_iface_combo("auto")
+
+        self.iface_refresh_btn = QToolButton()
+        self.iface_refresh_btn.setText("刷新")
+        self.iface_refresh_btn.setToolTip("重新扫描当前电脑的有线/无线网卡")
+        self.iface_refresh_btn.clicked.connect(lambda: self._refresh_iface_combo(self._iface_value_from_ui()))
+
+        iface_row = QWidget()
+        iface_row_layout = QHBoxLayout(iface_row)
+        iface_row_layout.setContentsMargins(0, 0, 0, 0)
+        iface_row_layout.setSpacing(6)
+        iface_row_layout.addWidget(self.iface_edit, 1)
+        iface_row_layout.addWidget(self.iface_refresh_btn)
 
         self.protocol_combo = QComboBox()
         self.protocol_combo.addItem("Unitree SDK2", "sdk2")
@@ -3952,7 +4095,7 @@ class MainWindow(QMainWindow):
 
         form.addRow("机器人 IP：", self.ip_edit)
         form.addRow("视频服务端口：", self.port_spin)
-        form.addRow("本机网卡/接口：", self.iface_edit)
+        form.addRow("本机网卡/接口：", iface_row)
         form.addRow("通信方式：", self.protocol_combo)
         form.addRow("状态 Topic：", self.lowstate_topic_combo)
         form.addRow("状态数据类型：", self.lowstate_idl_combo)
@@ -3982,7 +4125,8 @@ class MainWindow(QMainWindow):
         info_layout = QVBoxLayout(info_group)
         info = QLabel(
             "系统当前只读取机器人状态，不发布运动控制指令。没有数据时，请依次检查机器人 IP、"
-            "网卡名称、DDS 环境、Topic 和 IDL 类型。无线连接时建议把“本机网卡/接口”设为 auto；程序会自动选择到机器人 IP 的路由网卡。"
+            "网卡名称、DDS 环境、Topic 和 IDL 类型。本机网卡/接口可选择 auto、有线、无线，"
+            "也可以直接选择当前电脑扫描到的具体网卡名。切换有线/无线后，DDS 需要重新初始化，建议关闭客户端后重新打开再连接。"
         )
         info.setWordWrap(True)
         info.setStyleSheet("color:#526277; line-height:150%; padding:3px;")
@@ -5477,6 +5621,66 @@ th {{ background:#eef4fb; width:28%; }}
 
             self.param_table.setItem(row, col, item)
     
+    def _iface_value_from_ui(self) -> str:
+        """读取“本机网卡/接口”下拉框中的真实配置值。"""
+        text = self.iface_edit.currentText().strip()
+
+        for index in range(self.iface_edit.count()):
+            if self.iface_edit.itemText(index) == text:
+                data = self.iface_edit.itemData(index)
+                if isinstance(data, str) and data.strip():
+                    return data.strip()
+
+        return text
+
+    def _set_iface_combo_value(self, value: str) -> None:
+        """设置网卡下拉框，兼容 auto/wired/wireless/具体网卡名/旧配置。"""
+        value = (value or "auto").strip() or "auto"
+        self._refresh_iface_combo(value)
+
+        for index in range(self.iface_edit.count()):
+            data = self.iface_edit.itemData(index)
+            text = self.iface_edit.itemText(index)
+            if data == value or text == value or text.startswith(value + " "):
+                self.iface_edit.setCurrentIndex(index)
+                return
+
+        self.iface_edit.setEditText(value)
+
+    def _refresh_iface_combo(self, keep_value: str = "") -> None:
+        """刷新“本机网卡/接口”下拉列表，显示 auto/有线/无线/真实网卡。"""
+        keep_value = (keep_value or "").strip()
+
+        self.iface_edit.blockSignals(True)
+        self.iface_edit.clear()
+
+        self.iface_edit.addItem("自动选择 auto（按机器人 IP 路由）", "auto")
+        self.iface_edit.addItem("有线优先 wired（网线/USB 网口）", "wired")
+        self.iface_edit.addItem("无线优先 wireless（Wi-Fi）", "wireless")
+
+        for item in list_network_interface_details():
+            kind = item.get("kind", "other")
+            if kind in {"loopback", "virtual"}:
+                continue
+
+            name = item["name"]
+            state = item.get("state") or "unknown"
+            ipv4 = item.get("ipv4") or "无 IPv4"
+            label = f"{name}  [{item.get('kind_label', '其他')} | {state} | {ipv4}]"
+            self.iface_edit.addItem(label, name)
+
+        self.iface_edit.blockSignals(False)
+
+        if keep_value:
+            for index in range(self.iface_edit.count()):
+                data = self.iface_edit.itemData(index)
+                text = self.iface_edit.itemText(index)
+                if data == keep_value or text == keep_value or text.startswith(keep_value + " "):
+                    self.iface_edit.setCurrentIndex(index)
+                    return
+            self.iface_edit.setEditText(keep_value)
+
+
     def _get_config_from_ui(self) -> RobotConfig:
 
         lidar_state_topic = "rt/utlidar/lidar_state"
@@ -5490,7 +5694,7 @@ th {{ background:#eef4fb; width:28%; }}
         return RobotConfig(
             robot_ip=self.ip_edit.text().strip(),
             port=int(self.port_spin.value()),
-            network_interface=self.iface_edit.text().strip(),
+            network_interface=self._iface_value_from_ui(),
             protocol=self.protocol_combo.currentData(),
             lowstate_topic=self.lowstate_topic_combo.currentText().strip(),
             lowstate_idl=self.lowstate_idl_combo.currentText().strip(),
@@ -5519,10 +5723,7 @@ th {{ background:#eef4fb; width:28%; }}
             self.port_spin.setValue(cfg.port)
 
             loaded_iface = (cfg.network_interface or "auto").strip() or "auto"
-            if loaded_iface == "enx9c69d3565ef9":
-                loaded_iface = "auto"
-                self.append_log("检测到旧版固定有线网卡配置，已切换为 auto，适配无线/有线自动选择。")
-            self.iface_edit.setText(loaded_iface)
+            self._set_iface_combo_value(loaded_iface)
 
             self._set_combo_by_data(self.protocol_combo, cfg.protocol)
             self.lowstate_topic_combo.setCurrentText(cfg.lowstate_topic)
@@ -5556,6 +5757,23 @@ th {{ background:#eef4fb; width:28%; }}
 
         if not cfg.robot_ip:
             QMessageBox.warning(self, "配置错误", "机器人 IP 不能为空。")
+            return
+
+        try:
+            target_iface = resolve_dds_interface(cfg.robot_ip, cfg.network_interface, self.append_log)
+        except Exception as exc:
+            QMessageBox.warning(self, "网卡选择错误", str(exc))
+            return
+
+        if _DDS_FACTORY_INITIALIZED and target_iface != _DDS_FACTORY_IFACE:
+            QMessageBox.warning(
+                self,
+                "需要重启客户端",
+                "Unitree DDS 已经在当前进程初始化，不能在同一进程内从一个网卡切换到另一个网卡。\n\n"
+                f"当前已绑定：{_DDS_FACTORY_IFACE or 'SDK 默认接口'}\n"
+                f"准备切换到：{target_iface or 'SDK 默认接口'}\n\n"
+                "请先关闭 H1Vision 客户端，切换有线/无线网络后重新打开，再点击连接。",
+            )
             return
 
         self.client.connect_robot(cfg)
