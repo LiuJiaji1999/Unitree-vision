@@ -43,28 +43,33 @@ cd ~/Desktop/unitree_sdk2_python-master
 conda activate vision
 rm -rf build dist build_packaging_entry H1Vision.spec
 ./build_linux.sh --deb
-打包完成后会生成：
-    dist/H1Vision/H1Vision
-    dist/H1Vision-linux-x64.tar.gz
-    dist/h1vision_1.0.0_amd64.deb
-dist/H1Vision/H1Vision 是 Linux 文件夹版可执行程序；
-dist/h1vision_1.0.0_amd64.deb 是 Ubuntu/Debian 系统安装包，可拷贝到其他 Ubuntu 电脑安装使用。
+# 打包完成后会生成：
+#     dist/H1Vision/H1Vision 是 Linux 文件夹版可执行程序；
+#     dist/H1Vision-linux-x64.tar.gz
+#     dist/h1vision_1.0.0_amd64.deb 是 Ubuntu/Debian 系统安装包，可拷贝到其他 Ubuntu 电脑安装使用。
+部署时请分发 dist 目录下的压缩包，或整个 dist/H1Vision 文件夹。
+Linux 产物：
+  dist/H1Vision/H1Vision
+  dist/H1Vision-linux-x64.tar.gz
 
 #### 三、测试打包后的客户端
 打包完成后，建议先在本机测试：
 conda deactivate
 cd ~/Desktop/unitree_sdk2_python-master/dist/H1Vision
+运行测试：
 H1_SHOW_NATIVE_CONSOLE=1 ./H1Vision
 如果客户端界面可以正常启动，说明打包成功。
 
-如果出现网卡相关报错，例如：
-    does not match an available interface
-    [ChannelFactory] create domain error
-说明配置文件中的网卡名称与当前电脑不一致，需要修改 `h1_config.json` 中的网卡名。
-查看当前电脑网卡： ip -br addr
-然后修改配置文件： vim h1_config.json
+# 如果出现网卡相关报错，例如：
+#     does not match an available interface
+#     [ChannelFactory] create domain error
+# 说明配置文件中的网卡名称与当前电脑不一致，需要修改 `h1_config.json` 中的网卡名。
+# 查看当前电脑网卡： ip -br addr
+# 然后修改配置文件： vim h1_config.json
 
 #### 四、安装客户端到本机或其他 Ubuntu 电脑
+先卸载：
+    sudo apt remove h1vision
 将下面这个文件拷贝到目标 Ubuntu 电脑：
     dist/h1vision_1.0.0_amd64.deb
 在目标电脑执行：
@@ -80,26 +85,28 @@ H1_SHOW_NATIVE_CONSOLE=1 ./H1Vision
 
 #### 五、通过桌面菜单启动
 安装 `.deb` 后，系统应用菜单中会出现：
-H1Vision
+    H1Vision
 可在 Ubuntu 应用菜单中搜索 `H1Vision`，点击图标启动客户端。
 如果菜单中没有立即出现，可以执行：
-sudo update-desktop-database /usr/share/applications 2>/dev/null || true
+    sudo update-desktop-database /usr/share/applications 2>/dev/null || true
 或者注销后重新登录。
 
+# #### 六、更新客户端版本
+# 先卸载：
+#     sudo apt remove h1vision
+# 如果本地源码修改后需要更新目标电脑上的客户端，需要重新打包并重新安装新的 `.deb` 文件：
+#     cd ~/Desktop/unitree_sdk2_python-master
+#     conda activate vision
+#     rm -rf build dist build_packaging_entry H1Vision.spec
+#     ./build_linux.sh --deb
 
-#### 六、更新客户端版本
-如果本地源码修改后需要更新目标电脑上的客户端，需要重新打包并重新安装新的 `.deb` 文件：
-cd ~/Desktop/unitree_sdk2_python-master
-conda activate vision
-rm -rf build dist build_packaging_entry H1Vision.spec
-./build_linux.sh --deb
+# 然后在目标电脑重新安装：
+#     cd ~/Desktop/unitree_sdk2_python-master
+#     sudo apt install ./dist/h1vision_1.0.0_amd64.deb
+#     sudo chown -R $USER:$USER /opt/h1vision
 
-然后在目标电脑重新安装：
-sudo apt install ./dist/h1vision_1.0.0_amd64.deb
-sudo chown -R $USER:$USER /opt/h1vision
-
-安装后再次启动：
-/opt/h1vision/H1Vision
+# 安装后再次启动：
+#     /opt/h1vision/H1Vision
 ```
 
 ## 快速开始[https://support.unitree.com/home/zh/H1_developer/start]
