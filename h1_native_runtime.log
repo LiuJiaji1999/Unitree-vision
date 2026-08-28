@@ -364,3 +364,7 @@ QProcess: Destroyed while process ("bash") is still running.
 [Reader] take sample error
 [Reader] take sample error
 [Reader] take sample error
+
+===== H1 native console redirected at 2026-07-21 16:53:03 =====
+1784623986.270799 [0] LowStateWo: enx9c69d3565ef9: does not match an available interface.
+[ChannelFactory] create domain error. msg: Occurred upon initialisation of a cyclonedds.domain.Domain
